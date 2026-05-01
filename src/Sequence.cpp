@@ -64,12 +64,7 @@ bool Sequence::run() {
         d_.config->save();
     }
 
-    // 6. Hop back to TP-Link
-    if (!d_.net->hopTo(WifiTarget::TpLink)) {
-        Serial.println("[seq] post-sequence tplink reconnect failed");
-        d_.led->setState(LedState::Error);
-        return false;
-    }
+    // 6. Stay on Fritzbox (idle network) — already there, nothing to do.
 
     d_.led->setState(LedState::Success);
     return true;

@@ -36,8 +36,10 @@ void enterRuntimeMode() {
   Serial.println("[boot] entering runtime mode");
   net.configure(cfg.tplinkSsid, cfg.tplinkPass, cfg.fritzboxSsid, cfg.fritzboxPass);
   net.configureTplinkStatic(cfg.tplinkStaticIp, cfg.tplinkGateway);
-  if (!net.connectTplink()) {
-    Serial.println("[boot] could not reach TP-Link; staying error");
+  // Idle on Fritzbox: that's where phones live and where /trigger requests come from.
+  // The sequence hops to TP-Link briefly to WoL the PC, then comes back.
+  if (!net.connectFritzbox()) {
+    Serial.println("[boot] could not reach Fritzbox; staying error");
     led.setState(LedState::Error);
     return;
   }
@@ -104,7 +106,6 @@ void loop() {
     scanner.stop();
     Sequence seq({ &cfg, &net, &led });
     seq.run();
-    // Restart scanning after sequence ends (network is back on TP-Link).
     scanner.start(0);
   }
 
