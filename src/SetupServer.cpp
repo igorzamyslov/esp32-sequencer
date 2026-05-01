@@ -14,6 +14,8 @@ fieldset{margin:1em 0}</style>
 <fieldset><legend>WiFi: TP-Link (where the PC is reachable for WoL)</legend>
 SSID <input name=tpSsid>
 Password <input name=tpPass type=password>
+Static IP (optional, leave empty for DHCP) <input name=tpIp placeholder="192.168.137.253">
+Gateway (only if static IP is set) <input name=tpGw placeholder="192.168.137.1">
 </fieldset>
 <fieldset><legend>WiFi: Fritzbox (where the TV is)</legend>
 SSID <input name=fbSsid>
@@ -92,6 +94,8 @@ static String arg(AsyncWebServerRequest* req, const char* name) {
 void SetupServer::handleSave(AsyncWebServerRequest* req) {
     cfg_.tplinkSsid    = arg(req, "tpSsid");
     cfg_.tplinkPass    = arg(req, "tpPass");
+    cfg_.tplinkStaticIp= arg(req, "tpIp");
+    cfg_.tplinkGateway = arg(req, "tpGw");
     cfg_.fritzboxSsid  = arg(req, "fbSsid");
     cfg_.fritzboxPass  = arg(req, "fbPass");
     cfg_.pcMac         = arg(req, "pcMac");

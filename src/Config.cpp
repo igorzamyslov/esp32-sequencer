@@ -14,6 +14,8 @@ Config Config::load() {
     prefs().begin(NS, true); // read-only
     c.tplinkSsid    = prefs().getString("tpSsid", "");
     c.tplinkPass    = prefs().getString("tpPass", "");
+    c.tplinkStaticIp= prefs().getString("tpIp", "");
+    c.tplinkGateway = prefs().getString("tpGw", "");
     c.fritzboxSsid  = prefs().getString("fbSsid", "");
     c.fritzboxPass  = prefs().getString("fbPass", "");
     c.pcMac         = prefs().getString("pcMac", "");
@@ -29,6 +31,8 @@ void Config::save() const {
     prefs().begin(NS, false); // read-write
     prefs().putString("tpSsid", tplinkSsid);
     prefs().putString("tpPass", tplinkPass);
+    prefs().putString("tpIp", tplinkStaticIp);
+    prefs().putString("tpGw", tplinkGateway);
     prefs().putString("fbSsid", fritzboxSsid);
     prefs().putString("fbPass", fritzboxPass);
     prefs().putString("pcMac", pcMac);

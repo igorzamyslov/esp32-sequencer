@@ -8,6 +8,10 @@ public:
     void configure(const String& tpSsid, const String& tpPass,
                    const String& fbSsid, const String& fbPass);
 
+    // Optional static IP for the TP-Link side (used when PC's ICS DHCP isn't up).
+    // Pass empty strings to disable (default = DHCP).
+    void configureTplinkStatic(const String& ip, const String& gateway);
+
     // Blocks up to timeout_ms. Returns true on success.
     bool connect(WifiTarget target, uint32_t timeout_ms = 15000);
     void disconnect();
@@ -24,5 +28,6 @@ public:
 
 private:
     String tpSsid_, tpPass_, fbSsid_, fbPass_;
+    String tpStaticIp_, tpGateway_;
     WifiTarget current_ = WifiTarget::None;
 };

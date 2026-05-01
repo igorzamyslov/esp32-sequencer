@@ -7,6 +7,11 @@ void NetworkManager::configure(const String& tpSsid, const String& tpPass,
     fbSsid_ = fbSsid; fbPass_ = fbPass;
 }
 
+void NetworkManager::configureTplinkStatic(const String& ip, const String& gateway) {
+    tpStaticIp_ = ip;
+    tpGateway_  = gateway;
+}
+
 bool NetworkManager::connect(WifiTarget target, uint32_t timeout_ms) {
     if (current_ == target && WiFi.isConnected()) return true;
     if (WiFi.isConnected()) WiFi.disconnect(true, true);
@@ -23,6 +28,23 @@ bool NetworkManager::connect(WifiTarget target, uint32_t timeout_ms) {
 
     Serial.printf("[net] connecting to %s\n", ssid);
     WiFi.mode(WIFI_STA);
+
+    if (target == WifiTarget::TpLink && tpStaticIp_.length() && tpGateway_.length()) {
+        IPAddress ip, gw, mask(255, 255, 255, 0);
+        if (ip.fromString(tpStaticIp_) && gw.fromString(tpGateway_)) {
+            // gateway also doubles as the DNS server (ICS host runs DNS forwarder)
+            WiFi.config(ip, gw, mask, gw);
+            Serial.printf("[net] using static ip=%s gw=%s\n",
+                          tpStaticIp_.c_str(), tpGateway_.c_str());
+        } else {
+            Serial.println("[net] invalid static ip/gateway, falling back to DHCP");
+            WiFi.config(IPAddress((uint32_t)0), IPAddress((uint32_t)0), IPAddress((uint32_t)0));
+        }
+    } else {
+        // ensure any prior static config is cleared (e.g. when hopping back from TpLink to Fritzbox)
+        WiFi.config(IPAddress((uint32_t)0), IPAddress((uint32_t)0), IPAddress((uint32_t)0));
+    }
+
     WiFi.begin(ssid, pass);
 
     uint32_t start = millis();

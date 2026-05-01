@@ -35,6 +35,7 @@ void enterSetupMode() {
 void enterRuntimeMode() {
   Serial.println("[boot] entering runtime mode");
   net.configure(cfg.tplinkSsid, cfg.tplinkPass, cfg.fritzboxSsid, cfg.fritzboxPass);
+  net.configureTplinkStatic(cfg.tplinkStaticIp, cfg.tplinkGateway);
   if (!net.connectTplink()) {
     Serial.println("[boot] could not reach TP-Link; staying error");
     led.setState(LedState::Error);

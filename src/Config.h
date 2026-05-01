@@ -4,6 +4,8 @@
 struct Config {
     String tplinkSsid;
     String tplinkPass;
+    String tplinkStaticIp; // optional; empty = DHCP. Required when PC's ICS isn't up yet.
+    String tplinkGateway;  // optional; only used when tplinkStaticIp is set. Mask is /24.
     String fritzboxSsid;
     String fritzboxPass;
     String pcMac;          // "AA:BB:CC:DD:EE:FF"
