@@ -77,3 +77,7 @@ bool NetworkManager::hopTo(WifiTarget target, uint32_t timeout_ms) {
 String NetworkManager::localIp() const {
     return WiFi.isConnected() ? WiFi.localIP().toString() : String("");
 }
+
+bool NetworkManager::isConnected() const {
+    return WiFi.isConnected();
+}

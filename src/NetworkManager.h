@@ -25,6 +25,7 @@ public:
     bool hopTo(WifiTarget target, uint32_t timeout_ms = 15000);
 
     String localIp() const;
+    bool isConnected() const;
 
 private:
     String tpSsid_, tpPass_, fbSsid_, fbPass_;
