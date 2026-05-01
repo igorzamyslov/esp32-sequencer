@@ -12,20 +12,20 @@ fieldset{margin:1em 0}</style>
 <h1>esp32-tv setup</h1>
 <form method=post action=/save>
 <fieldset><legend>WiFi: TP-Link (where the PC is reachable for WoL)</legend>
-SSID <input name=tpSsid>
-Password <input name=tpPass type=password>
-Static IP (optional, leave empty for DHCP) <input name=tpIp placeholder="192.168.137.253">
-Gateway (only if static IP is set) <input name=tpGw placeholder="192.168.137.1">
+SSID <input name=tpSsid value="{{tpSsid}}">
+Password <input name=tpPass type=password placeholder="{{tpPassHint}}">
+Static IP (optional, leave empty for DHCP) <input name=tpIp value="{{tpIp}}" placeholder="192.168.137.253">
+Gateway (only if static IP is set) <input name=tpGw value="{{tpGw}}" placeholder="192.168.137.1">
 </fieldset>
 <fieldset><legend>WiFi: Fritzbox (where the TV is)</legend>
-SSID <input name=fbSsid>
-Password <input name=fbPass type=password>
+SSID <input name=fbSsid value="{{fbSsid}}">
+Password <input name=fbPass type=password placeholder="{{fbPassHint}}">
 </fieldset>
 <fieldset><legend>Devices</legend>
-PC's wired-NIC MAC <input name=pcMac placeholder="AA:BB:CC:DD:EE:FF">
-Samsung TV IP <input name=tvIp placeholder="192.168.178.42">
-Samsung TV MAC (WiFi) <input name=tvMac placeholder="AA:BB:CC:DD:EE:FF">
-DualSense MAC <input name=dsMac id=dsMac placeholder="(use Pair button below)">
+PC's wired-NIC MAC <input name=pcMac value="{{pcMac}}" placeholder="AA:BB:CC:DD:EE:FF">
+Samsung TV IP <input name=tvIp value="{{tvIp}}" placeholder="192.168.178.42">
+Samsung TV MAC (WiFi) <input name=tvMac value="{{tvMac}}" placeholder="AA:BB:CC:DD:EE:FF">
+DualSense MAC <input name=dsMac id=dsMac value="{{dsMac}}" placeholder="(use Pair button below)">
 <button type=button onclick="startPair()">Pair gamepad</button>
 <span id=pairStatus></span>
 </fieldset>
@@ -82,8 +82,36 @@ void SetupServer::loop() {
     dns_.processNextRequest();
 }
 
+static String htmlAttrEscape(const String& s) {
+    String out;
+    out.reserve(s.length() + 8);
+    for (size_t i = 0; i < s.length(); i++) {
+        char c = s[i];
+        switch (c) {
+            case '&':  out += "&amp;"; break;
+            case '<':  out += "&lt;"; break;
+            case '>':  out += "&gt;"; break;
+            case '"':  out += "&quot;"; break;
+            case '\'': out += "&#39;"; break;
+            default:   out += c; break;
+        }
+    }
+    return out;
+}
+
 void SetupServer::handleRoot(AsyncWebServerRequest* req) {
-    req->send(200, "text/html", INDEX_HTML);
+    String html = INDEX_HTML;
+    html.replace("{{tpSsid}}", htmlAttrEscape(cfg_.tplinkSsid));
+    html.replace("{{tpIp}}",   htmlAttrEscape(cfg_.tplinkStaticIp));
+    html.replace("{{tpGw}}",   htmlAttrEscape(cfg_.tplinkGateway));
+    html.replace("{{fbSsid}}", htmlAttrEscape(cfg_.fritzboxSsid));
+    html.replace("{{pcMac}}",  htmlAttrEscape(cfg_.pcMac));
+    html.replace("{{tvIp}}",   htmlAttrEscape(cfg_.tvIp));
+    html.replace("{{tvMac}}",  htmlAttrEscape(cfg_.tvMac));
+    html.replace("{{dsMac}}",  htmlAttrEscape(cfg_.dualsenseMac));
+    html.replace("{{tpPassHint}}", cfg_.tplinkPass.length()   ? "(saved — leave empty to keep)" : "");
+    html.replace("{{fbPassHint}}", cfg_.fritzboxPass.length() ? "(saved — leave empty to keep)" : "");
+    req->send(200, "text/html", html);
 }
 
 static String arg(AsyncWebServerRequest* req, const char* name) {
@@ -93,11 +121,13 @@ static String arg(AsyncWebServerRequest* req, const char* name) {
 
 void SetupServer::handleSave(AsyncWebServerRequest* req) {
     cfg_.tplinkSsid    = arg(req, "tpSsid");
-    cfg_.tplinkPass    = arg(req, "tpPass");
+    String tpPass      = arg(req, "tpPass");
+    if (tpPass.length()) cfg_.tplinkPass = tpPass; // empty = keep existing
     cfg_.tplinkStaticIp= arg(req, "tpIp");
     cfg_.tplinkGateway = arg(req, "tpGw");
     cfg_.fritzboxSsid  = arg(req, "fbSsid");
-    cfg_.fritzboxPass  = arg(req, "fbPass");
+    String fbPass      = arg(req, "fbPass");
+    if (fbPass.length()) cfg_.fritzboxPass = fbPass;
     cfg_.pcMac         = arg(req, "pcMac");
     cfg_.tvIp          = arg(req, "tvIp");
     cfg_.tvMac         = arg(req, "tvMac");
