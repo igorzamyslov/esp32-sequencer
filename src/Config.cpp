@@ -23,6 +23,7 @@ Config Config::load() {
     c.tvMac         = prefs().getString("tvMac", "");
     c.tvToken       = prefs().getString("tvTok", "");
     c.dualsenseMac  = prefs().getString("dsMac", "");
+    c.setupFallback = prefs().getBool("sFb", false);
     prefs().end();
     return c;
 }
@@ -40,6 +41,7 @@ void Config::save() const {
     prefs().putString("tvMac", tvMac);
     prefs().putString("tvTok", tvToken);
     prefs().putString("dsMac", dualsenseMac);
+    prefs().putBool("sFb", setupFallback);
     prefs().end();
 }
 
@@ -47,4 +49,18 @@ void Config::clear() {
     prefs().begin(NS, false);
     prefs().clear();
     prefs().end();
+}
+
+void Config::requestSetupOnNextBoot() {
+    prefs().begin(NS, false);
+    prefs().putBool("forceSetup", true);
+    prefs().end();
+}
+
+bool Config::consumeSetupRequest() {
+    prefs().begin(NS, false);
+    bool v = prefs().getBool("forceSetup", false);
+    if (v) prefs().remove("forceSetup");
+    prefs().end();
+    return v;
 }

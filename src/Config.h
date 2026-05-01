@@ -13,10 +13,16 @@ struct Config {
     String tvMac;
     String tvToken;        // empty until pairing succeeds
     String dualsenseMac;
+    bool setupFallback = false; // if true, SoftAP setup mode auto-starts after persistent wifi failure
 
     static Config load();
     void save() const;
     static void clear();
+
+    // One-shot flag that survives reboot and forces the next boot into setup mode
+    // even when the stored config is complete.
+    static void requestSetupOnNextBoot();
+    static bool consumeSetupRequest();
 
     // Has every value needed to enter runtime mode.
     bool hasAll() const {

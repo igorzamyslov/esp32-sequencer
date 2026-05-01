@@ -7,11 +7,12 @@
 #include "TvController.h"
 #include "Sequence.h"
 #include "SetupServer.h"
+#include "ConfigForm.h"
 
 constexpr int LED_PIN = 8;
 constexpr uint32_t COOLDOWN_MS = 60000;
 constexpr uint32_t WIFI_RETRY_BACKOFF_MS = 15000;
-constexpr int WIFI_FAILURES_BEFORE_SETUP = 4; // ~60s of failed retries → fall back to setup AP
+constexpr int WIFI_FAILURES_BEFORE_SETUP = 40; // ~10 min of failed retries (only if cfg.setupFallback)
 
 StatusLed led;
 Config cfg;
@@ -53,11 +54,20 @@ void startRuntimeHttp() {
     delay(500);
     ESP.restart();
   });
+  runtime_http.on("/setup", HTTP_POST, [](AsyncWebServerRequest* req){
+    Config::requestSetupOnNextBoot();
+    req->send(200, "text/plain", "entering setup mode — rebooting");
+    delay(500);
+    ESP.restart();
+  });
   runtime_http.on("/", HTTP_GET, [](AsyncWebServerRequest* req){
-    req->send(200, "text/plain",
-      "esp32-tv runtime\n"
-      "POST /trigger  -> run the sequence\n"
-      "POST /reset    -> wipe config and reboot to setup mode\n");
+    req->send(200, "text/html", ConfigForm::renderHtml(cfg, false));
+  });
+  runtime_http.on("/save", HTTP_POST, [](AsyncWebServerRequest* req){
+    ConfigForm::applySave(req, cfg);
+    req->send(200, "text/plain", "saved — rebooting in 2s");
+    delay(2000);
+    ESP.restart();
   });
   runtime_http.begin();
   runtime_http_started_ = true;
@@ -92,7 +102,7 @@ void tryConnectIdle() {
     startBle();
   } else {
     wifi_failures_++;
-    if (wifi_failures_ >= WIFI_FAILURES_BEFORE_SETUP) {
+    if (cfg.setupFallback && wifi_failures_ >= WIFI_FAILURES_BEFORE_SETUP) {
       Serial.printf("[runtime] %d failed wifi attempts — falling back to setup mode\n",
                     wifi_failures_);
       net.disconnect();
@@ -101,9 +111,8 @@ void tryConnectIdle() {
       return;
     }
     led.setState(LedState::Error);
-    Serial.printf("[runtime] idle wifi unreachable (%d/%d), retry in %lus\n",
-                  wifi_failures_, WIFI_FAILURES_BEFORE_SETUP,
-                  (unsigned long)(WIFI_RETRY_BACKOFF_MS / 1000));
+    Serial.printf("[runtime] idle wifi unreachable (attempt %d), retry in %lus\n",
+                  wifi_failures_, (unsigned long)(WIFI_RETRY_BACKOFF_MS / 1000));
     next_wifi_retry_ms_ = millis() + WIFI_RETRY_BACKOFF_MS;
   }
 }
