@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ESPAsyncWebServer.h>
 #include "StatusLed.h"
 #include "Config.h"
 #include "NetworkManager.h"
@@ -14,6 +15,7 @@ StatusLed led;
 Config cfg;
 NetworkManager net;
 BleScanner scanner;
+AsyncWebServer runtime_http(80);
 
 // Setup-mode owner; allocated only if config missing.
 SetupServer* setup_srv = nullptr;
@@ -52,6 +54,19 @@ void enterRuntimeMode() {
     Serial.printf("[runtime] DualSense detected rssi=%d, queuing sequence\n", h.rssi);
   });
   scanner.start(0);
+  runtime_http.on("/trigger", HTTP_POST, [](AsyncWebServerRequest* req){
+    sequence_pending_ = true;
+    cooldown_until_ = millis() + COOLDOWN_MS;
+    req->send(200, "text/plain", "queued");
+  });
+  runtime_http.on("/reset", HTTP_POST, [](AsyncWebServerRequest* req){
+    Config::clear();
+    req->send(200, "text/plain", "cleared — rebooting");
+    delay(500);
+    ESP.restart();
+  });
+  runtime_http.begin();
+  Serial.printf("[boot] runtime http on http://%s/\n", net.localIp().c_str());
 }
 
 void setup() {
