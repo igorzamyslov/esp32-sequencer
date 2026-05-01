@@ -43,17 +43,7 @@ void enterRuntimeMode() {
   led.setState(LedState::Idle);
   in_runtime_ = true;
 
-  scanner.begin();
-  scanner.onHit([](const BleHit& h){
-    if (millis() < cooldown_until_) return;
-    String mac = h.mac; mac.toLowerCase();
-    String wanted = cfg.dualsenseMac; wanted.toLowerCase();
-    if (mac != wanted) return;
-    sequence_pending_ = true;
-    cooldown_until_ = millis() + COOLDOWN_MS;
-    Serial.printf("[runtime] DualSense detected rssi=%d, queuing sequence\n", h.rssi);
-  });
-  scanner.start(0);
+  Serial.println("[boot] registering HTTP routes");
   runtime_http.on("/trigger", HTTP_POST, [](AsyncWebServerRequest* req){
     sequence_pending_ = true;
     cooldown_until_ = millis() + COOLDOWN_MS;
@@ -65,8 +55,28 @@ void enterRuntimeMode() {
     delay(500);
     ESP.restart();
   });
+  runtime_http.on("/", HTTP_GET, [](AsyncWebServerRequest* req){
+    req->send(200, "text/plain",
+      "esp32-tv runtime\n"
+      "POST /trigger  -> run the sequence\n"
+      "POST /reset    -> wipe config and reboot to setup mode\n");
+  });
   runtime_http.begin();
   Serial.printf("[boot] runtime http on http://%s/\n", net.localIp().c_str());
+
+  Serial.println("[boot] starting BLE scanner");
+  scanner.begin();
+  scanner.onHit([](const BleHit& h){
+    if (millis() < cooldown_until_) return;
+    String mac = h.mac; mac.toLowerCase();
+    String wanted = cfg.dualsenseMac; wanted.toLowerCase();
+    if (mac != wanted) return;
+    sequence_pending_ = true;
+    cooldown_until_ = millis() + COOLDOWN_MS;
+    Serial.printf("[runtime] DualSense detected rssi=%d, queuing sequence\n", h.rssi);
+  });
+  scanner.start(0);
+  Serial.println("[boot] BLE scanner running");
 }
 
 void setup() {
