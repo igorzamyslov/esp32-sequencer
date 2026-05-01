@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
+#include <DNSServer.h>
 #include "Config.h"
 #include "BleScanner.h"
 
@@ -8,10 +9,12 @@ class SetupServer {
 public:
     SetupServer(Config& cfg, BleScanner& scanner) : cfg_(cfg), scanner_(scanner), server_(80) {}
     void begin();
+    void loop();
 private:
     Config& cfg_;
     BleScanner& scanner_;
     AsyncWebServer server_;
+    DNSServer dns_;
 
     // Pair-gamepad state
     String best_ds_mac_;

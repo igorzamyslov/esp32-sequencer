@@ -71,7 +71,8 @@ void enterRuntimeMode() {
 
 void setup() {
   Serial.begin(115200);
-  delay(200);
+  delay(1500); // wait for USB-CDC to enumerate before first println
+  Serial.println("[boot] hi");
   led.attachPin(LED_PIN);
 
   cfg = Config::load();
@@ -84,6 +85,8 @@ void setup() {
 
 void loop() {
   led.tick(millis());
+
+  if (setup_srv) setup_srv->loop();
 
   if (in_runtime_ && sequence_pending_) {
     sequence_pending_ = false;

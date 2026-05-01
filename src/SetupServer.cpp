@@ -60,7 +60,10 @@ void SetupServer::begin() {
     server_.on("/pair-start", HTTP_POST, [this](AsyncWebServerRequest* r){ handlePairStart(r); });
     server_.on("/pair-status", HTTP_GET, [this](AsyncWebServerRequest* r){ handlePairStatus(r); });
     server_.on("/reset", HTTP_POST, [this](AsyncWebServerRequest* r){ handleReset(r); });
+    server_.onNotFound([](AsyncWebServerRequest* r){ r->redirect("http://192.168.4.1/"); });
     server_.begin();
+
+    dns_.start(53, "*", WiFi.softAPIP());
 
     scanner_.begin();
     scanner_.onHit([this](const BleHit& h){
@@ -71,6 +74,10 @@ void SetupServer::begin() {
             best_ds_mac_ = h.mac;
         }
     });
+}
+
+void SetupServer::loop() {
+    dns_.processNextRequest();
 }
 
 void SetupServer::handleRoot(AsyncWebServerRequest* req) {
