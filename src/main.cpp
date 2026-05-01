@@ -11,6 +11,7 @@
 constexpr int LED_PIN = 8;
 constexpr uint32_t COOLDOWN_MS = 60000;
 constexpr uint32_t WIFI_RETRY_BACKOFF_MS = 15000;
+constexpr int WIFI_FAILURES_BEFORE_SETUP = 4; // ~60s of failed retries → fall back to setup AP
 
 StatusLed led;
 Config cfg;
@@ -26,6 +27,7 @@ bool in_runtime_ = false;
 bool wifi_ready_ = false;
 bool runtime_http_started_ = false;
 bool ble_started_ = false;
+int wifi_failures_ = 0;
 uint32_t next_wifi_retry_ms_ = 0;
 uint32_t cooldown_until_ = 0;
 volatile bool sequence_pending_ = false;
@@ -85,11 +87,22 @@ void tryConnectIdle() {
   if (net.connectFritzbox()) {
     led.setState(LedState::Idle);
     wifi_ready_ = true;
+    wifi_failures_ = 0;
     startRuntimeHttp();
     startBle();
   } else {
+    wifi_failures_++;
+    if (wifi_failures_ >= WIFI_FAILURES_BEFORE_SETUP) {
+      Serial.printf("[runtime] %d failed wifi attempts — falling back to setup mode\n",
+                    wifi_failures_);
+      net.disconnect();
+      in_runtime_ = false;
+      enterSetupMode();
+      return;
+    }
     led.setState(LedState::Error);
-    Serial.printf("[runtime] idle wifi unreachable, retry in %lus\n",
+    Serial.printf("[runtime] idle wifi unreachable (%d/%d), retry in %lus\n",
+                  wifi_failures_, WIFI_FAILURES_BEFORE_SETUP,
                   (unsigned long)(WIFI_RETRY_BACKOFF_MS / 1000));
     next_wifi_retry_ms_ = millis() + WIFI_RETRY_BACKOFF_MS;
   }
