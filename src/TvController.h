@@ -18,6 +18,11 @@ public:
     // was open and the message was queued.
     bool sendKey(const char* key);
 
+    // Drive the websocket event loop for ms milliseconds. Required after
+    // sendKey() to actually flush outbound frames and read incoming events;
+    // a plain delay() leaves the underlying TCP unattended.
+    void pump(uint32_t ms);
+
     void disconnect();
 
 private:

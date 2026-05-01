@@ -8,6 +8,31 @@
 #include "Sequence.h"
 #include "SetupServer.h"
 #include "ConfigForm.h"
+#include "TvController.h"
+
+static const char MENU_HTML[] = R"HTML(
+<!doctype html><meta charset=utf-8><title>esp32-tv</title>
+<style>body{font-family:sans-serif;max-width:520px;margin:2em auto;padding:0 1em}
+button,a.btn{display:block;width:100%;padding:1em;margin:.5em 0;font-size:1em;text-align:center;text-decoration:none;border:1px solid #888;background:#f4f4f4;color:#000;cursor:pointer;box-sizing:border-box}
+.danger{background:#fdd}
+#status{margin-top:1em;color:#444;min-height:1.2em}</style>
+<h1>esp32-tv</h1>
+<button onclick="post('/trigger')">Trigger sequence (wake PC + TV)</button>
+<a class=btn href="/settings">Settings</a>
+<button class=danger onclick="if(confirm('Reboot into setup AP mode?'))post('/setup')">Enter setup mode</button>
+<button class=danger onclick="if(confirm('Wipe all config and reboot?'))post('/reset')">Wipe config</button>
+<div id=status></div>
+<script>
+async function post(p){
+  const s=document.getElementById('status');
+  s.textContent=p+' ...';
+  try{
+    const r=await fetch(p,{method:'POST'});
+    s.textContent=p+' → '+r.status+' '+(await r.text());
+  }catch(e){ s.textContent=p+' failed: '+e; }
+}
+</script>
+)HTML";
 
 constexpr int LED_PIN = 8;
 constexpr uint32_t COOLDOWN_MS = 60000;
@@ -32,6 +57,8 @@ int wifi_failures_ = 0;
 uint32_t next_wifi_retry_ms_ = 0;
 uint32_t cooldown_until_ = 0;
 volatile bool sequence_pending_ = false;
+volatile bool tv_key_pending_ = false;
+String tv_key_value_;
 
 void enterSetupMode() {
   Serial.println("[boot] entering setup mode");
@@ -61,6 +88,9 @@ void startRuntimeHttp() {
     ESP.restart();
   });
   runtime_http.on("/", HTTP_GET, [](AsyncWebServerRequest* req){
+    req->send(200, "text/html", MENU_HTML);
+  });
+  runtime_http.on("/settings", HTTP_GET, [](AsyncWebServerRequest* req){
     req->send(200, "text/html", ConfigForm::renderHtml(cfg, false));
   });
   runtime_http.on("/save", HTTP_POST, [](AsyncWebServerRequest* req){
@@ -68,6 +98,16 @@ void startRuntimeHttp() {
     req->send(200, "text/plain", "saved — rebooting in 2s");
     delay(2000);
     ESP.restart();
+  });
+  // Diagnostic: send a single Tizen key over the WS without running the full
+  // sequence. Use POST /tv-key?k=KEY_HDMI3 — handy for figuring out which key
+  // a particular Tizen model accepts for input switching.
+  runtime_http.on("/tv-key", HTTP_POST, [](AsyncWebServerRequest* req){
+    if (!req->hasParam("k")) { req->send(400, "text/plain", "missing k"); return; }
+    if (tv_key_pending_) { req->send(429, "text/plain", "busy"); return; }
+    tv_key_value_ = req->getParam("k")->value();
+    tv_key_pending_ = true;
+    req->send(200, "text/plain", String("queued: ") + tv_key_value_);
   });
   runtime_http.begin();
   runtime_http_started_ = true;
@@ -155,6 +195,38 @@ void loop() {
       led.setState(LedState::Error);
       wifi_ready_ = false;
       next_wifi_retry_ms_ = millis() + 1000;
+    } else if (tv_key_pending_) {
+      tv_key_pending_ = false;
+      String keys = tv_key_value_;
+      if (ble_started_) scanner.stop();
+      if (net.current() != WifiTarget::Fritzbox) net.hopTo(WifiTarget::Fritzbox);
+      TvController tv;
+      bool tokenChanged = false;
+      String newToken;
+      tv.configure(cfg.tvIp, cfg.tvToken,
+                   [&](const String& t){ tokenChanged = true; newToken = t; });
+      if (tv.connectWithRetry(10000)) {
+        tv.pump(200);
+        // keys is a comma-separated list, e.g. "KEY_SOURCE,KEY_LEFT,KEY_RIGHT,KEY_ENTER"
+        int from = 0;
+        while (from <= (int)keys.length()) {
+          int comma = keys.indexOf(',', from);
+          String one = comma < 0 ? keys.substring(from) : keys.substring(from, comma);
+          one.trim();
+          if (one.length()) {
+            tv.sendKey(one.c_str());
+            tv.pump(250);
+          }
+          if (comma < 0) break;
+          from = comma + 1;
+        }
+        tv.pump(300);
+        tv.disconnect();
+      } else {
+        Serial.println("[tv-key] tv ws failed");
+      }
+      if (tokenChanged) { cfg.tvToken = newToken; cfg.save(); }
+      if (ble_started_) scanner.start(0);
     } else if (sequence_pending_) {
       sequence_pending_ = false;
       if (ble_started_) scanner.stop();

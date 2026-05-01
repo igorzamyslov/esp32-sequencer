@@ -1,5 +1,6 @@
 #include "TvController.h"
 #include <ArduinoJson.h>
+#include <WiFiClient.h>
 #include <base64.h>
 
 TvController* TvController::s_instance_ = nullptr;
@@ -20,11 +21,36 @@ String TvController::buildPath() const {
 
 bool TvController::connectWithRetry(uint32_t total_timeout_ms) {
     s_instance_ = this;
+    Serial.printf("[tv] target %s:8002, budget %lus\n",
+                  ip_.c_str(), (unsigned long)(total_timeout_ms / 1000));
+
+    // Periodically probe TCP so the log distinguishes "TV not on network"
+    // (port :8002 unreachable) from a real TLS handshake failure. Bridges
+    // the WoL → TV-network-up gap with explicit signal.
+    uint32_t start = millis();
+    bool tcp_ok = false;
+    while (!tcp_ok && millis() - start < total_timeout_ms) {
+        WiFiClient probe;
+        probe.setTimeout(2);
+        if (probe.connect(ip_.c_str(), 8002)) {
+            tcp_ok = true;
+            probe.stop();
+            Serial.printf("[tv] tcp ok after %lums\n", millis() - start);
+        } else {
+            Serial.printf("[tv] tcp not ready after %lums, retrying\n", millis() - start);
+            probe.stop();
+            delay(2000);
+        }
+    }
+    if (!tcp_ok) {
+        Serial.println("[tv] tcp never opened — TV unreachable (asleep? wrong IP? WoWLAN failed?)");
+        return false;
+    }
+
     ws_.beginSslWithCA(ip_.c_str(), 8002, buildPath().c_str(), nullptr, "");
     ws_.onEvent(&TvController::onEventStatic);
     ws_.setReconnectInterval(1000);
 
-    uint32_t start = millis();
     while (millis() - start < total_timeout_ms) {
         ws_.loop();
         if (connected_) return true;
@@ -34,7 +60,10 @@ bool TvController::connectWithRetry(uint32_t total_timeout_ms) {
 }
 
 bool TvController::sendKey(const char* key) {
-    if (!connected_) return false;
+    if (!connected_) {
+        Serial.printf("[tv] sendKey(%s) skipped: not connected\n", key);
+        return false;
+    }
     JsonDocument doc;
     doc["method"] = "ms.remote.control";
     auto params = doc["params"].to<JsonObject>();
@@ -44,10 +73,21 @@ bool TvController::sendKey(const char* key) {
     params["TypeOfRemote"] = "SendRemoteKey";
     String out;
     serializeJson(doc, out);
-    return ws_.sendTXT(out);
+    bool ok = ws_.sendTXT(out);
+    Serial.printf("[tv] sendTXT(%s) = %d (%u bytes)\n", key, ok, out.length());
+    return ok;
+}
+
+void TvController::pump(uint32_t ms) {
+    uint32_t start = millis();
+    while (millis() - start < ms) {
+        ws_.loop();
+        delay(10);
+    }
 }
 
 void TvController::disconnect() {
+    Serial.println("[tv] explicit disconnect");
     ws_.disconnect();
     connected_ = false;
 }

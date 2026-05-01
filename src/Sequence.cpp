@@ -34,13 +34,15 @@ bool Sequence::run() {
     }
     Serial.println("[seq] WoL→TV sent");
 
-    // 4. WebSocket connect with retry up to 15 s
+    // 4. WebSocket connect with retry up to 60 s. Tizen's WS service on :8002
+    // can take 20–60 s to come up after a cold WoL, so a short budget races the
+    // TV's boot.
     TvController tv;
     bool tokenChanged = false;
     String newToken;
     tv.configure(d_.config->tvIp, d_.config->tvToken,
                  [&](const String& t){ tokenChanged = true; newToken = t; });
-    if (!tv.connectWithRetry(15000)) {
+    if (!tv.connectWithRetry(60000)) {
         Serial.println("[seq] tv ws failed");
         d_.led->setState(LedState::Error);
         // continue cleanup
@@ -53,8 +55,25 @@ bool Sequence::run() {
         //   for (int i = 0; i < N; i++) { tv.sendKey("KEY_RIGHT"); delay(150); }
         //   tv.sendKey("KEY_ENTER");
         // …with N tuned for that TV.
-        tv.sendKey("KEY_HDMI3");
-        delay(500); // give TV a moment to process
+        // Settle the WS before the first key — some Tizen models close an
+        // idle channel right after ms.channel.connect if no traffic arrives.
+        tv.pump(200);
+        // KEY_HDMI3 isn't recognized on every Tizen model. The robust recipe
+        // is to open the source picker, mash LEFT to land on the leftmost
+        // entry (TV), then RIGHT N times to reach HDMIn, then ENTER. The
+        // menu opens at the *current* source, so we can't rely on the
+        // starting position.
+        const char* keys[] = {
+            "KEY_SOURCE",
+            "KEY_LEFT", "KEY_LEFT", "KEY_LEFT", "KEY_LEFT", "KEY_LEFT", "KEY_LEFT",
+            "KEY_RIGHT", "KEY_RIGHT", "KEY_RIGHT", // TV → HDMI1 → HDMI2 → HDMI3
+            "KEY_ENTER",
+        };
+        for (auto* k : keys) {
+            tv.sendKey(k);
+            tv.pump(250);
+        }
+        tv.pump(300);
         tv.disconnect();
     }
 
