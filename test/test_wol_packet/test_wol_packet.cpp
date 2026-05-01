@@ -25,6 +25,10 @@ void test_parse_mac_invalid_returns_false() {
     TEST_ASSERT_FALSE(Wol::parseMac("not-a-mac", mac));
     TEST_ASSERT_FALSE(Wol::parseMac("AA:BB:CC:11:22", mac));        // too short
     TEST_ASSERT_FALSE(Wol::parseMac("ZZ:BB:CC:11:22:33", mac));     // bad hex
+    TEST_ASSERT_FALSE(Wol::parseMac(nullptr, mac));                  // null
+    TEST_ASSERT_FALSE(Wol::parseMac("AA:BB:CC:11:22:33:44", mac));   // too long
+    TEST_ASSERT_FALSE(Wol::parseMac("AA:BB-CC:DD-EE:FF", mac));      // mixed separators
+    TEST_ASSERT_FALSE(Wol::parseMac("AA BB CC 11 22 33", mac));      // wrong separator
 }
 
 void test_magic_packet_is_102_bytes() {

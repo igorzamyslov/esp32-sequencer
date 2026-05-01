@@ -22,14 +22,13 @@ bool parseMac(const char* mac_str, uint8_t out[6]) {
     if (!mac_str) return false;
     // Expect 17 chars: 6 hex pairs separated by ':' or '-'
     if (strlen(mac_str) != 17) return false;
+    char sep = mac_str[2];
+    if (sep != ':' && sep != '-') return false;
     for (int i = 0; i < 6; i++) {
         int hi = hexNibble(mac_str[i * 3]);
         int lo = hexNibble(mac_str[i * 3 + 1]);
         if (hi < 0 || lo < 0) return false;
-        if (i < 5) {
-            char sep = mac_str[i * 3 + 2];
-            if (sep != ':' && sep != '-') return false;
-        }
+        if (i < 5 && mac_str[i * 3 + 2] != sep) return false;
         out[i] = (uint8_t)((hi << 4) | lo);
     }
     return true;

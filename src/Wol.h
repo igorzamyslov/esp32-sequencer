@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include <stddef.h>
 
 namespace Wol {
     // Parses "AA:BB:CC:DD:EE:FF" or "AA-BB-CC-DD-EE-FF" (case-insensitive).
