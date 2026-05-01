@@ -9,6 +9,7 @@ StatusLed::StatusLed() : state_(LedState::Setup), state_entered_at_(0) {}
 void StatusLed::setState(LedState s) {
     state_ = s;
     state_entered_at_ = 0;
+    entered_ = false;
 }
 
 static bool computeIsOn(LedState s, uint32_t t) {
@@ -44,18 +45,26 @@ bool StatusLed::isOnAt(uint32_t ms_since_state_entry) const {
 }
 
 void StatusLed::tick(uint32_t now_ms) {
-    // state_entered_at_ == 0 means "state was entered at the timeline origin"
-    // so elapsed = now_ms - 0 = now_ms. After an auto-transition, we anchor
-    // the new state's baseline to now_ms.
+    // Anchor state_entered_at_ to now_ms on the first tick after setState.
+    // We must not conflate "haven't been ticked yet" with "state entered at t=0",
+    // or in production (where millis() is large) Success/Error would auto-transition
+    // instantly and Idle's heartbeat would be phase-shifted.
+    if (!entered_) {
+        state_entered_at_ = now_ms;
+        entered_ = true;
+    }
     uint32_t elapsed = now_ms - state_entered_at_;
 
     if (state_ == LedState::Success && elapsed >= 2000) {
-        state_ = LedState::Idle;
+        setState(LedState::Idle);
+        // Re-anchor immediately so we don't lose this tick to the !entered_ branch.
         state_entered_at_ = now_ms;
+        entered_ = true;
         elapsed = 0;
     } else if (state_ == LedState::Error && elapsed >= 600) {
-        state_ = LedState::Idle;
+        setState(LedState::Idle);
         state_entered_at_ = now_ms;
+        entered_ = true;
         elapsed = 0;
     }
 

@@ -21,6 +21,7 @@ public:
 private:
     LedState state_ = LedState::Setup;
     uint32_t state_entered_at_ = 0;
+    bool entered_ = false;
     int pin_ = -1;
     bool last_written_ = false;
 };
