@@ -58,22 +58,29 @@ bool Sequence::run() {
         // Settle the WS before the first key — some Tizen models close an
         // idle channel right after ms.channel.connect if no traffic arrives.
         tv.pump(200);
+        // KEY_POWER intentionally not sent: it's a toggle and we have no
+        // reliable way to distinguish "TV on" from "TV in network-standby"
+        // on this 2018 Q6, so sending it risks turning the TV off when it
+        // was already on. User wakes the screen manually if needed.
         // KEY_HDMI3 isn't recognized on every Tizen model. The robust recipe
         // is to open the source picker, mash LEFT to land on the leftmost
         // entry (TV), then RIGHT N times to reach HDMIn, then ENTER. The
         // menu opens at the *current* source, so we can't rely on the
         // starting position.
+        // Source overlay needs noticeably longer to render than a single
+        // navigation step — issue it separately with a bigger settle.
+        tv.sendKey("KEY_SOURCE");
+        tv.pump(900);
         const char* keys[] = {
-            "KEY_SOURCE",
             "KEY_LEFT", "KEY_LEFT", "KEY_LEFT", "KEY_LEFT", "KEY_LEFT", "KEY_LEFT",
             "KEY_RIGHT", "KEY_RIGHT", "KEY_RIGHT", // TV → HDMI1 → HDMI2 → HDMI3
             "KEY_ENTER",
         };
         for (auto* k : keys) {
             tv.sendKey(k);
-            tv.pump(250);
+            tv.pump(350);
         }
-        tv.pump(300);
+        tv.pump(400);
         tv.disconnect();
     }
 
