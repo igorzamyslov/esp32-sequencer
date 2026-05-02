@@ -17,7 +17,7 @@ button,a.btn{display:block;width:100%;padding:1em;margin:.5em 0;font-size:1em;te
 .danger{background:#fdd}
 #status{margin-top:1em;color:#444;min-height:1.2em}</style>
 <h1>esp32-tv</h1>
-<button onclick="post('/trigger')">Trigger sequence (wake PC + TV)</button>
+<button onclick="post('/trigger')">Trigger — wake PC + TV, switch to HDMI3</button>
 <a class=btn href="/settings">Settings</a>
 <button class=danger onclick="if(confirm('Reboot into setup AP mode?'))post('/setup')">Enter setup mode</button>
 <button class=danger onclick="if(confirm('Wipe all config and reboot?'))post('/reset')">Wipe config</button>
