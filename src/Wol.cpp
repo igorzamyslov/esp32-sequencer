@@ -44,16 +44,40 @@ void buildMagicPacket(const uint8_t mac[6], uint8_t out[102]) {
 }
 
 #ifdef ARDUINO
+static bool sendOne(const uint8_t pkt[102], IPAddress dst, uint16_t port) {
+    WiFiUDP udp;
+    if (!udp.beginPacket(dst, port)) return false;
+    udp.write(pkt, 102);
+    return udp.endPacket() == 1;
+}
+
 bool sendBroadcast(const char* mac_str) {
     uint8_t mac[6];
     if (!parseMac(mac_str, mac)) return false;
     uint8_t pkt[102];
     buildMagicPacket(mac, pkt);
 
-    WiFiUDP udp;
-    if (!udp.beginPacket(IPAddress(255, 255, 255, 255), 9)) return false;
-    udp.write(pkt, sizeof(pkt));
-    return udp.endPacket() == 1;
+    // Samsung TVs in network-standby poll WiFi infrequently (DTIM interval),
+    // so a single magic packet often gets missed. Send to both global and
+    // local subnet broadcast, repeated, on the canonical WoL ports (7 and 9).
+    IPAddress global(255, 255, 255, 255);
+    IPAddress ip = WiFi.localIP();
+    IPAddress mask = WiFi.subnetMask();
+    IPAddress subnet(
+        ip[0] | (uint8_t)~mask[0],
+        ip[1] | (uint8_t)~mask[1],
+        ip[2] | (uint8_t)~mask[2],
+        ip[3] | (uint8_t)~mask[3]);
+
+    bool any_ok = false;
+    for (int rep = 0; rep < 5; rep++) {
+        if (sendOne(pkt, global, 9)) any_ok = true;
+        if (sendOne(pkt, global, 7)) any_ok = true;
+        if (sendOne(pkt, subnet, 9)) any_ok = true;
+        if (sendOne(pkt, subnet, 7)) any_ok = true;
+        delay(150);
+    }
+    return any_ok;
 }
 #endif
 
