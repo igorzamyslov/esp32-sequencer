@@ -1,6 +1,8 @@
+.idea/
 .pio/
 .vscode/
 .DS_Store
 src/secrets.h
 *.bin
 *.elf
+CLAUDE.md
