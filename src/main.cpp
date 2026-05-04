@@ -20,25 +20,7 @@
 #include "adapters/persistence/NvsPersistence.h"
 #include "adapters/triggers/HttpRouteTrigger.h"
 #include "adapters/triggers/BleMacTrigger.h"
-
-// (Original MENU_HTML retained — replaced in Phase 1B)
-static const char MENU_HTML[] = R"HTML(<!doctype html><meta charset=utf-8>
-<title>esp32-tv</title>
-<style>body{font-family:sans-serif;max-width:520px;margin:2em auto;padding:0 1em}
-button,a.btn{display:block;width:100%;padding:1em;margin:.5em 0;font-size:1em;text-align:center;text-decoration:none;border:1px solid #888;background:#f4f4f4;color:#000}
-.danger{background:#fdd}#status{margin-top:1em;color:#444;min-height:1.2em}</style>
-<h1>esp32-tv</h1>
-<a class=btn href="/api/sequences">Sequences (JSON)</a>
-<a class=btn href="/settings">Settings</a>
-<button onclick="post('/trigger')">Trigger default sequence</button>
-<button class=danger onclick="if(confirm('Setup mode?'))post('/setup')">Setup mode</button>
-<button class=danger onclick="if(confirm('Wipe config?'))post('/reset')">Wipe config</button>
-<div id=status></div>
-<script>
-async function post(p){const s=document.getElementById('status');s.textContent=p+' ...';
-  try{const r=await fetch(p,{method:'POST'});s.textContent=p+' → '+r.status+' '+(await r.text());}
-  catch(e){s.textContent=p+' failed: '+e;}}
-</script>)HTML";
+#include "web/web_assets.h"
 
 constexpr int LED_PIN = 8;
 constexpr uint32_t WIFI_RETRY_BACKOFF_MS = 15000;
@@ -109,6 +91,12 @@ void seedDefaultsIfEmpty() {
     if (trigStore->all().empty()) { trigStore->replaceAll(def.triggers);   trigStore->save(); }
 }
 
+static void sendGz(AsyncWebServerRequest* req, const unsigned char* data, size_t len) {
+    auto* r = req->beginResponse_P(200, "text/html", data, len);
+    r->addHeader("Content-Encoding", "gzip");
+    req->send(r);
+}
+
 void startRuntimeHttp() {
     if (runtime_http_started_) return;
     Serial.println("[runtime] registering routes");
@@ -123,9 +111,9 @@ void startRuntimeHttp() {
         req->send(200, "text/plain", "entering setup mode — rebooting");
         delay(500); ESP.restart();
     });
-    http.on("/",        HTTP_GET,  [](AsyncWebServerRequest* req){
-        req->send(200, "text/html", MENU_HTML);
-    });
+    http.on("/",         HTTP_GET, [](AsyncWebServerRequest* req){ sendGz(req, LANDING_HTML_GZ,  LANDING_HTML_GZ_LEN); });
+    http.on("/edit",     HTTP_GET, [](AsyncWebServerRequest* req){ sendGz(req, EDITOR_HTML_GZ,   EDITOR_HTML_GZ_LEN); });
+    http.on("/triggers", HTTP_GET, [](AsyncWebServerRequest* req){ sendGz(req, TRIGGERS_HTML_GZ, TRIGGERS_HTML_GZ_LEN); });
     http.on("/settings", HTTP_GET, [](AsyncWebServerRequest* req){
         req->send(200, "text/html", ConfigForm::renderHtml(cfg, false));
     });
