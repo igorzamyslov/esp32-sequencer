@@ -34,17 +34,25 @@ From a TP-Link client: `curl -X POST http://<esp32-ip>/reset`.
 - Monitor: `pio device monitor`
 - Tests:   `pio test -e native`
 
-## Sequence-builder (Phase 1A)
+## Sequence builder
 
-The wake-everything routine is now a JSON sequence stored in NVS, runnable via
-`POST /trigger` (default HTTP-route trigger) or by editing through the API:
+The wake-everything routine is one of many possible *sequences* — ordered lists
+of typed *blocks* (`wol`, `wifi-hop`, `samsung-keys`, `wait`, `repeat`, `if`, …)
+stored in NVS as JSON. Sequences are run by *triggers* (BLE MAC detection,
+HTTP routes) which are also configured at runtime.
 
-- `GET /api/schema` — list available block, predicate, and trigger types.
-- `GET /api/sequences` and `GET /api/triggers` — current configuration.
-- `PUT /api/sequences` and `PUT /api/triggers` — replace the lists.
-- `POST /api/run?id=<id>` — run one sequence on demand.
+- `http://<esp>/`         — landing page (sequences + triggers)
+- `http://<esp>/edit`     — visual editor
+- `http://<esp>/triggers` — trigger bindings
+- `http://<esp>/settings` — wifi/MAC/IP config (unchanged)
 
-A web editor lands in Phase 1B.
+API (JSON): `/api/schema`, `/api/sequences` (GET/PUT), `/api/triggers` (GET/PUT),
+`/api/run?id=<id>` (POST), `/api/status` (GET).
+
+To add a new block type for a different TV/PC/console, drop a single
+`.cpp` file under `src/adapters/blocks/`, register it in the static-init
+`_Reg` struct, and rebuild. Schemas are introspected at runtime so the editor
+picks up the new block automatically.
 
 ## Diagnostics
 **Input switching**: `KEY_HDMI3` is not recognized on all Tizen models. The robust recipe is: open the source picker (`KEY_SOURCE`), mash `KEY_LEFT` to reach the leftmost entry, then `KEY_RIGHT` N times to reach HDMIn, then `KEY_ENTER`. This is what the default `wake-everything` sequence uses. To adjust counts for a different TV layout, `PUT /api/sequences` with the changed `samsung-keys` blocks.
