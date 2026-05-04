@@ -1,1 +1,96 @@
-<!doctype html><title>triggers</title>
+<!doctype html>
+<meta charset="utf-8">
+<title>triggers · esp32-tv</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{ --ink:#111;--paper:#fafaf7;--muted:#666;--rule:#d8d6cf;--accent:#c8553d; }
+@media(prefers-color-scheme:dark){:root{--ink:#e9e7e0;--paper:#15140f;--muted:#9b988e;--rule:#33312b;--accent:#e87a64;}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.45 system-ui,sans-serif}
+.wrap{max-width:760px;margin:32px auto;padding:0 20px}
+h1{font-weight:600;margin:0 0 16px}
+.row{border:1px solid var(--rule);border-radius:3px;padding:12px 16px;margin:8px 0;display:grid;grid-template-columns:1fr 1fr 1fr 80px 60px 60px;gap:8px;align-items:center}
+.row:first-child{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border:0;padding:0 16px;margin:8px 0 0}
+input,select{font:inherit;padding:6px 8px;background:transparent;border:1px solid var(--rule);border-radius:3px;color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+button,a.btn{font:inherit;padding:6px 12px;border:1px solid var(--rule);background:transparent;color:var(--ink);border-radius:3px;cursor:pointer;text-decoration:none}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
+#status{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px;color:var(--muted);margin-right:auto;align-self:center}
+.params{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px;color:var(--muted)}
+</style>
+<div class="wrap">
+  <a class="btn" href="/">← back</a>
+  <h1 style="margin-top:12px">Triggers</h1>
+  <div id="rows"></div>
+  <div class="actions">
+    <span id="status"></span>
+    <button onclick="addRow()">Add trigger</button>
+    <button class="primary" onclick="save()">Save</button>
+  </div>
+</div>
+<script>
+let schema=null, seqs=[], trigs=[];
+const $ = s => document.querySelector(s);
+
+(async function(){
+  schema = await fetch('/api/schema').then(r=>r.json());
+  seqs   = await fetch('/api/sequences').then(r=>r.json());
+  trigs  = await fetch('/api/triggers').then(r=>r.json());
+  render();
+})();
+
+function defaultParams(fields){
+  const p={}; for(const f of fields||[]){ if(f.default!==undefined){
+    p[f.key]= f.type==='int'?parseInt(f.default,10):f.default;
+  }} return p;
+}
+
+function addRow(){
+  const t0 = schema.triggers[0];
+  trigs.push({id:'',type:t0.type,sequenceId:(seqs[0]||{}).id||'',params:defaultParams(t0.fields),enabled:true});
+  render();
+}
+
+function render(){
+  const head = `<div class="row"><div>Type</div><div>Params</div><div>Sequence</div><div>Enabled</div><div></div><div></div></div>`;
+  const rows = trigs.map((t,i) => {
+    const sch = schema.triggers.find(x=>x.type===t.type) || schema.triggers[0];
+    const typeOpts = schema.triggers.map(x=>`<option value="${x.type}" ${t.type===x.type?'selected':''}>${x.label}</option>`).join('');
+    const seqOpts  = seqs.map(s=>`<option value="${s.id}" ${t.sequenceId===s.id?'selected':''}>${s.name||s.id}</option>`).join('');
+    const paramFields = (sch.fields||[]).map(f =>
+      `<input style="margin:1px 0" placeholder="${f.label}" oninput="trigs[${i}].params['${f.key}']=this.${f.type==='int'?'valueAsNumber':'value'}" value="${(t.params||{})[f.key]??''}">`
+    ).join('');
+    return `<div class="row">
+      <select onchange="changeType(${i}, this.value)">${typeOpts}</select>
+      <div class="params">${paramFields}</div>
+      <select onchange="trigs[${i}].sequenceId=this.value">${seqOpts}</select>
+      <label><input type="checkbox" ${t.enabled?'checked':''} onchange="trigs[${i}].enabled=this.checked"> on</label>
+      <button onclick="run(${i})">Run</button>
+      <button onclick="trigs.splice(${i},1);render()">✕</button>
+    </div>`;
+  }).join('');
+  $('#rows').innerHTML = head + (rows || '<div class="row" style="grid-template-columns:1fr"><div style="color:var(--muted)">No triggers — add one.</div></div>');
+}
+
+function changeType(i, type){
+  const sch = schema.triggers.find(x=>x.type===type);
+  trigs[i].type = type;
+  trigs[i].params = defaultParams(sch.fields);
+  render();
+}
+
+async function run(i){
+  const t=trigs[i]; if(!t.sequenceId) return;
+  $('#status').textContent='running '+t.sequenceId+' …';
+  const r = await fetch('/api/run?id='+encodeURIComponent(t.sequenceId),{method:'POST'});
+  $('#status').textContent='run '+r.status+': '+await r.text();
+}
+
+async function save(){
+  $('#status').textContent='saving …';
+  const r = await fetch('/api/triggers',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(trigs)});
+  trigs = await r.json();
+  $('#status').textContent='saved';
+  render();
+}
+</script>
