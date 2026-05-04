@@ -26,6 +26,7 @@ public:
 };
 
 WolBlock& instance(){ static WolBlock i; return i; }
-struct _Reg { _Reg(){ Registry::instance().registerBlock(&instance()); } } _reg;
 
 }
+
+namespace seqb { void registerWolBlock() { Registry::instance().registerBlock(&instance()); } }

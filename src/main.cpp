@@ -20,6 +20,7 @@
 #include "adapters/persistence/NvsPersistence.h"
 #include "adapters/triggers/HttpRouteTrigger.h"
 #include "adapters/triggers/BleMacTrigger.h"
+#include "adapters/RegisterAll.h"
 #include "web/web_assets.h"
 
 constexpr int LED_PIN = 8;
@@ -217,10 +218,17 @@ void enterRuntimeMode() {
 }
 
 void setup() {
-    Serial.begin(115200); delay(1500);
+    Serial.begin(115200);
+    delay(1500);
     Serial.println("[boot] hi");
+    Serial.flush();
+    seqb::registerAllAdapters();
+    Serial.println("[boot] adapters registered");
+    Serial.flush();
     led.attachPin(LED_PIN);
     cfg = Config::load();
+    Serial.printf("[boot] config loaded, hasAll=%d\n", cfg.hasAll() ? 1 : 0);
+    Serial.flush();
     if (!cfg.hasAll()) enterSetupMode();
     else               enterRuntimeMode();
 }

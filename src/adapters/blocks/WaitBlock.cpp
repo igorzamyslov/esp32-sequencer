@@ -24,6 +24,7 @@ public:
 };
 
 WaitBlock& instance(){ static WaitBlock i; return i; }
-struct _Reg { _Reg(){ Registry::instance().registerBlock(&instance()); } } _reg;
 
 }
+
+namespace seqb { void registerWaitBlock() { Registry::instance().registerBlock(&instance()); } }

@@ -64,6 +64,6 @@ void BleMacTrigger::onHit(const std::string& macLower, int /*rssi*/) {
     }
 }
 
-namespace { struct _Reg { _Reg(){ Registry::instance().registerTrigger(&BleMacTrigger::instance()); } } _reg; }
+void registerBleMacTrigger() { Registry::instance().registerTrigger(&BleMacTrigger::instance()); }
 
 }

@@ -62,6 +62,6 @@ void HttpRouteTrigger::unbind(const std::string& id) {
     g_active.erase(it);
 }
 
-namespace { struct _Reg { _Reg(){ Registry::instance().registerTrigger(&HttpRouteTrigger::instance()); } } _reg; }
+void registerHttpRouteTrigger() { Registry::instance().registerTrigger(&HttpRouteTrigger::instance()); }
 
 }
