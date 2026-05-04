@@ -9,9 +9,8 @@ struct DefaultsResult {
     std::vector<TriggerBinding> triggers;
 };
 
-// Build the default seed using runtime config values (so MACs match user config).
-DefaultsResult buildDefaults(const std::string& pcMac,
-                             const std::string& tvMac,
-                             const std::string& dualsenseMac);
+// Build a starter sequence + http-route binding with placeholder values.
+// Users edit MACs/IPs in the editor on first run.
+DefaultsResult buildDefaults();
 
 }

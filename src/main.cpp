@@ -6,8 +6,6 @@
 #include "Config.h"
 #include "NetworkManager.h"
 #include "BleScanner.h"
-#include "TvController.h"
-#include "Sequence.h"        // legacy — Phase 2 deletes it
 #include "SetupServer.h"
 #include "ConfigForm.h"
 #include "ApiServer.h"
@@ -83,10 +81,7 @@ void enterSetupMode() {
 void seedDefaultsIfEmpty() {
     if (!seqStore->all().empty() && !trigStore->all().empty()) return;
     Serial.println("[boot] seeding defaults");
-    auto def = seqb::buildDefaults(
-        std::string(cfg.pcMac.c_str()),
-        std::string(cfg.tvMac.c_str()),
-        std::string(cfg.dualsenseMac.c_str()));
+    auto def = seqb::buildDefaults();
     if (seqStore->all().empty())  { seqStore->replaceAll(def.sequences);   seqStore->save(); }
     if (trigStore->all().empty()) { trigStore->replaceAll(def.triggers);   trigStore->save(); }
 }
@@ -121,27 +116,6 @@ void startRuntimeHttp() {
         ConfigForm::applySave(req, cfg);
         req->send(200, "text/plain", "saved — rebooting in 2s");
         delay(2000); ESP.restart();
-    });
-
-    // tv-key kept until Phase 2 (legacy diagnostic): synchronously runs an ad-hoc
-    // samsung-keys sequence with the supplied comma-separated keys.
-    http.on("/tv-key", HTTP_POST, [](AsyncWebServerRequest* req){
-        if (!req->hasParam("k")) { req->send(400, "text/plain", "missing k"); return; }
-        seqb::Sequence ad;
-        ad.id = "tv-key-adhoc";
-        seqb::Node n; n.type = "samsung-keys";
-        n.params["keys"] = req->getParam("k")->value().c_str();
-        n.params["settle_ms"] = 250;
-        n.params["connect_timeout_ms"] = 10000;
-        ad.nodes.push_back(n);
-        seqb::RunCtx ctx;
-        ctx.config = &cfg; ctx.net = &net; ctx.led = &led;
-        running_ = true; lastError_ = "";
-        auto r = interp->runSequence(ad, ctx);
-        running_ = false; lastRunMs_ = millis();
-        if (r.status == seqb::RunStatus::Failed) lastError_ = r.error;
-        req->send(200, "text/plain",
-            r.status == seqb::RunStatus::Ok ? "ok" : r.error.c_str());
     });
 
     // Wire trigger adapter dependencies BEFORE applying bindings.

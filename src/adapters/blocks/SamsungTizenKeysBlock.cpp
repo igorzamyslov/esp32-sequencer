@@ -9,12 +9,13 @@ using namespace seqb;
 namespace {
 
 constexpr FieldDef FIELDS[] = {
-    {"keys",      FieldType::StringList, "Keys (comma-separated)", nullptr, nullptr, true},
-    {"settle_ms", FieldType::Int,        "Settle ms after each key", "250", nullptr, false},
-    {"connect_timeout_ms", FieldType::Int, "Connect timeout (ms)",  "60000", nullptr, false},
+    {"ip",        FieldType::String,     "TV IP address",            nullptr, nullptr, true},
+    {"keys",      FieldType::StringList, "Keys (comma-separated)",   nullptr, nullptr, true},
+    {"settle_ms", FieldType::Int,        "Settle ms after each key", "250",   nullptr, false},
+    {"connect_timeout_ms", FieldType::Int, "Connect timeout (ms)",   "60000", nullptr, false},
 };
 constexpr BlockSchema SCH = {
-    "samsung-keys", "Samsung TV: send keys", "TV (Samsung)", FIELDS, 3, nullptr, 0,
+    "samsung-keys", "Samsung TV: send keys", "TV (Samsung)", FIELDS, 4, nullptr, 0,
 };
 
 class SamsungTizenKeysBlock : public Block {
@@ -24,6 +25,8 @@ public:
                   const std::map<std::string, std::vector<Node>>&,
                   RunCtx& ctx, Interpreter&) override {
         if (!ctx.config) return RunResult::failed("samsung-keys: no config");
+        const char* ip = params["ip"].as<const char*>();
+        if (!ip || !ip[0]) return RunResult::failed("samsung-keys: missing ip");
         const char* csv = params["keys"].as<const char*>();
         if (!csv || !csv[0]) return RunResult::failed("samsung-keys: missing keys");
         uint32_t settle = params["settle_ms"] | 250;
@@ -32,7 +35,7 @@ public:
         TvController tv;
         bool tokenChanged = false;
         String newToken;
-        tv.configure(ctx.config->tvIp, ctx.config->tvToken,
+        tv.configure(String(ip), ctx.config->tvToken,
                      [&](const String& t){ tokenChanged = true; newToken = t; });
         if (!tv.connectWithRetry(toMs)) return RunResult::failed("samsung-keys: ws connect failed");
         tv.pump(200);
