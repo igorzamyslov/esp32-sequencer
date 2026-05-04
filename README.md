@@ -34,8 +34,20 @@ From a TP-Link client: `curl -X POST http://<esp32-ip>/reset`.
 - Monitor: `pio device monitor`
 - Tests:   `pio test -e native`
 
+## Sequence-builder (Phase 1A)
+
+The wake-everything routine is now a JSON sequence stored in NVS, runnable via
+`POST /trigger` (default HTTP-route trigger) or by editing through the API:
+
+- `GET /api/schema` — list available block, predicate, and trigger types.
+- `GET /api/sequences` and `GET /api/triggers` — current configuration.
+- `PUT /api/sequences` and `PUT /api/triggers` — replace the lists.
+- `POST /api/run?id=<id>` — run one sequence on demand.
+
+A web editor lands in Phase 1B.
+
 ## Diagnostics
-**Input switching**: `KEY_HDMI3` is not recognized on all Tizen models. The robust recipe is: open the source picker (`KEY_SOURCE`), mash `KEY_LEFT` to reach the leftmost entry, then `KEY_RIGHT` N times to reach HDMIn, then `KEY_ENTER`. This is what `Sequence.cpp` uses. If a different TV has a different menu layout, adjust the counts in `Sequence.cpp`.
+**Input switching**: `KEY_HDMI3` is not recognized on all Tizen models. The robust recipe is: open the source picker (`KEY_SOURCE`), mash `KEY_LEFT` to reach the leftmost entry, then `KEY_RIGHT` N times to reach HDMIn, then `KEY_ENTER`. This is what the default `wake-everything` sequence uses. To adjust counts for a different TV layout, `PUT /api/sequences` with the changed `samsung-keys` blocks.
 
 **TV key endpoint**: POST `/tv-key?k=KEY_NAME` or `/tv-key?k=KEY_A,KEY_B,KEY_C` (comma-separated keys) to test a key sequence on the TV. Connects, sends key(s), disconnects. Useful for debugging source switching on a specific model:
 ```
