@@ -88,9 +88,15 @@ let selPath = null;    // path to selected node, e.g. [0] or [0,'body',1]
 let nextLocalKey = 1;  // ephemeral ids for diff
 
 // ---- Boot ----
+function normalizeNode(n){
+  if (!n.params) n.params = {};
+  if (!n.children) n.children = {};
+  for (const k of Object.keys(n.children)) (n.children[k]||[]).forEach(normalizeNode);
+}
 (async function init(){
   schema = await fetch('/api/schema').then(r=>r.json());
   allSeqs = await fetch('/api/sequences').then(r=>r.json());
+  for (const s of allSeqs) (s.nodes||[]).forEach(normalizeNode);
   if (seqId) {
     seq = allSeqs.find(s => s.id === seqId);
   }
@@ -241,12 +247,13 @@ function renderList(list, basePath){
 
 function renderSummary(n, sch){
   if (!sch) return '?';
-  if (n.type === 'wait') return (n.params.ms||0) + 'ms';
-  if (n.type === 'repeat') return '× ' + (n.params.count||1);
-  if (n.type === 'wol') return n.params.mac || '';
-  if (n.type === 'wifi-hop') return n.params.target || '';
-  if (n.type === 'samsung-keys') return (n.params.keys||'').slice(0, 32);
-  if (n.type === 'if') return (n.params.predicate||{}).type || '';
+  const p = n.params || {};
+  if (n.type === 'wait') return (p.ms||0) + 'ms';
+  if (n.type === 'repeat') return '× ' + (p.count||1);
+  if (n.type === 'wol') return p.mac || '';
+  if (n.type === 'wifi-hop') return p.ssid || '';
+  if (n.type === 'samsung-keys') return (p.keys||'').slice(0, 32);
+  if (n.type === 'if') return (p.predicate||{}).type || '';
   return '';
 }
 
@@ -323,7 +330,7 @@ function attachField(node, f, id){
     if (f.type === 'int')   v = parseInt(v,10);
     if (f.type === 'bool')  v = e.target.checked;
     set(v);
-    if (['type','target','count','mac','keys','ms'].includes(f.key)) renderTree();
+    if (['type','ssid','count','mac','keys','ms'].includes(f.key)) renderTree();
   };
 }
 

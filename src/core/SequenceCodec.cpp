@@ -33,7 +33,13 @@ void decodeNode(JsonVariantConst src, Node& dst, std::string& brokenReason) {
 
 void encodeNode(JsonObject dst, const Node& src) {
     dst["type"] = src.type;
-    dst["params"].set(src.params.as<JsonVariantConst>());
+    // Always emit an object for "params" — never null — so consumers don't
+    // have to defend against `null.field` on nodes that left params unset.
+    if (src.params.isNull()) {
+        dst["params"].to<JsonObject>();
+    } else {
+        dst["params"].set(src.params.as<JsonVariantConst>());
+    }
     JsonObject ch = dst["children"].to<JsonObject>();
     for (auto& kv : src.children) {
         JsonArray arr = ch[kv.first].to<JsonArray>();
