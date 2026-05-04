@@ -1,0 +1,18 @@
+CompileFlags:
+  Remove:
+    - -fstrict-volatile-bitfields
+    - -fno-tree-switch-conversion
+    - -mlongcalls
+    - -mtext-section-literals
+    - -march=rv32imc*
+    - -march=rv32imac*
+  Add:
+    - -I./src
+    - -I./test
+    - -ferror-limit=0
+Diagnostics:
+  Suppress:
+    - drv_unknown_argument
+    - drv_unsupported_option_argument
+    - attribute_section_invalid_for_target
+    - pp_file_not_found
