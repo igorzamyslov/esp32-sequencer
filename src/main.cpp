@@ -135,6 +135,10 @@ void startRuntimeHttp() {
 
 void startBle() {
     if (ble_started_) return;
+    if (seqb::BleMacTrigger::activeCount() == 0) {
+        Serial.println("[runtime] no ble-mac triggers — skipping BLE scanner");
+        return;
+    }
     Serial.println("[runtime] starting BLE scanner");
     scanner.begin();
     scanner.onHit([](const BleHit& h){

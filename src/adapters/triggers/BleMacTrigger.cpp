@@ -53,6 +53,8 @@ void BleMacTrigger::bind(const std::string& id, JsonVariantConst params,
 
 void BleMacTrigger::unbind(const std::string& id) { g_active.erase(id); }
 
+int BleMacTrigger::activeCount() { return (int)g_active.size(); }
+
 void BleMacTrigger::onHit(const std::string& macLower, int /*rssi*/) {
     uint32_t now = millis();
     for (auto& kv : g_active) {
