@@ -61,21 +61,18 @@ void ApiServer::registerRoutes() {
     putTrigs->setMethod(HTTP_PUT);
     srv_.addHandler(putTrigs);
 
-    // POST /api/sequences/:id/run (manual path parsing)
-    srv_.on("/api/sequences", HTTP_POST,
-            [this](AsyncWebServerRequest* req){
-        String url = req->url();
-        // Extract :id from "/api/sequences/ID/run"
-        const char* prefix = "/api/sequences/";
-        const char* suffix = "/run";
-        if (url.startsWith(prefix) && url.endsWith(suffix)) {
-            String id = url.substring(strlen(prefix), url.length() - strlen(suffix));
-            auto* s = seqs_.findById(std::string(id.c_str()));
-            if (!s) { sendJson(req, R"({"error":"unknown sequence"})", 404); return; }
-            if (s->broken) { sendJson(req, R"({"error":"sequence is broken"})", 422); return; }
-            hooks_.enqueueRun(s->id);
-            sendJson(req, R"({"status":"queued"})");
+    // POST /api/run?id=ABC — query-param contract to avoid regex routes.
+    srv_.on("/api/run", HTTP_POST, [this](AsyncWebServerRequest* req){
+        if (!req->hasParam("id")) {
+            sendJson(req, R"({"error":"missing id"})", 400);
+            return;
         }
+        std::string id = std::string(req->getParam("id")->value().c_str());
+        auto* s = seqs_.findById(id);
+        if (!s)         { sendJson(req, R"({"error":"unknown sequence"})", 404); return; }
+        if (s->broken)  { sendJson(req, R"({"error":"sequence is broken"})", 422); return; }
+        hooks_.enqueueRun(s->id);
+        sendJson(req, R"({"status":"queued"})");
     });
 }
 

@@ -2472,13 +2472,16 @@ void ApiServer::registerRoutes() {
     putTrigs->setMethod(HTTP_PUT);
     srv_.addHandler(putTrigs);
 
-    // POST /api/sequences/:id/run
-    srv_.on("^\\/api\\/sequences\\/([a-zA-Z0-9_-]+)\\/run$", HTTP_POST,
-            [this](AsyncWebServerRequest* req){
-        String id = req->pathArg(0);
-        auto* s = seqs_.findById(std::string(id.c_str()));
-        if (!s) { sendJson(req, R"({"error":"unknown sequence"})", 404); return; }
-        if (s->broken) { sendJson(req, R"({"error":"sequence is broken"})", 422); return; }
+    // POST /api/run?id=ABC — query-param contract to avoid regex routes.
+    srv_.on("/api/run", HTTP_POST, [this](AsyncWebServerRequest* req){
+        if (!req->hasParam("id")) {
+            sendJson(req, R"({"error":"missing id"})", 400);
+            return;
+        }
+        std::string id = std::string(req->getParam("id")->value().c_str());
+        auto* s = seqs_.findById(id);
+        if (!s)         { sendJson(req, R"({"error":"unknown sequence"})", 404); return; }
+        if (s->broken)  { sendJson(req, R"({"error":"sequence is broken"})", 422); return; }
         hooks_.enqueueRun(s->id);
         sendJson(req, R"({"status":"queued"})");
     });
@@ -2833,7 +2836,7 @@ The wake-everything routine is now a JSON sequence stored in NVS, runnable via
 - `GET /api/schema` — list available block, predicate, and trigger types.
 - `GET /api/sequences` and `GET /api/triggers` — current configuration.
 - `PUT /api/sequences` and `PUT /api/triggers` — replace the lists.
-- `POST /api/sequences/<id>/run` — run one sequence on demand.
+- `POST /api/run?id=<id>` — run one sequence on demand.
 
 A web editor lands in Phase 1B.
 ```
@@ -3071,7 +3074,7 @@ async function run(id){
   const s=document.getElementById('status');
   s.textContent='running '+id+' …';
   try{
-    const r=await fetch('/api/sequences/'+encodeURIComponent(id)+'/run',{method:'POST'});
+    const r=await fetch('/api/run?id='+encodeURIComponent(id),{method:'POST'});
     s.textContent=id+' → '+r.status+' '+await r.text();
   }catch(e){ s.textContent=id+' failed: '+e; }
 }
@@ -3456,7 +3459,7 @@ async function save(){
 async function testRun(){
   if (!seq.id) { await save(); }
   $('#status').textContent = 'running …';
-  const r = await fetch('/api/sequences/'+encodeURIComponent(seq.id)+'/run',{method:'POST'});
+  const r = await fetch('/api/run?id='+encodeURIComponent(seq.id),{method:'POST'});
   $('#status').textContent = 'run ' + r.status + ': ' + await r.text();
   poll();
 }
@@ -3574,7 +3577,7 @@ function changeType(i, type){
 async function run(i){
   const t=trigs[i]; if(!t.sequenceId) return;
   $('#status').textContent='running '+t.sequenceId+' …';
-  const r = await fetch('/api/sequences/'+encodeURIComponent(t.sequenceId)+'/run',{method:'POST'});
+  const r = await fetch('/api/run?id='+encodeURIComponent(t.sequenceId),{method:'POST'});
   $('#status').textContent='run '+r.status+': '+await r.text();
 }
 
@@ -3620,7 +3623,7 @@ HTTP routes) which are also configured at runtime.
 - `http://<esp>/settings` — wifi/MAC/IP config (unchanged)
 
 API (JSON): `/api/schema`, `/api/sequences` (GET/PUT), `/api/triggers` (GET/PUT),
-`/api/sequences/<id>/run` (POST), `/api/status` (GET).
+`/api/run?id=<id>` (POST), `/api/status` (GET).
 
 To add a new block type for a different TV/PC/console, drop a single
 `.cpp` file under `src/adapters/blocks/`, register it in the static-init
