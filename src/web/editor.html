@@ -1,1 +1,366 @@
-<!doctype html><title>editor</title>
+<!doctype html>
+<meta charset="utf-8">
+<title>edit · esp32-tv</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+  --ink:#111; --paper:#fafaf7; --muted:#666; --rule:#d8d6cf; --accent:#c8553d; --hi:#fff7c2;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --ink:#e9e7e0; --paper:#15140f; --muted:#9b988e; --rule:#33312b; --accent:#e87a64; --hi:#3b3520; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);
+  font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;
+  border-bottom:1px solid var(--rule);background:var(--paper);position:sticky;top:0;z-index:10}
+header input{font:inherit;border:1px solid transparent;border-radius:3px;padding:4px 6px;background:transparent;color:var(--ink);min-width:280px}
+header input:focus{outline:none;border-color:var(--rule)}
+header .actions{display:flex;gap:8px}
+button,a.btn{font:inherit;padding:6px 12px;border:1px solid var(--rule);background:transparent;
+  color:var(--ink);border-radius:3px;cursor:pointer;text-decoration:none}
+button:hover{border-color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+main{display:grid;grid-template-columns:220px 1fr 320px;gap:0;height:calc(100vh - 49px)}
+@media (max-width:900px){ main{grid-template-columns:1fr;height:auto} }
+.col{overflow-y:auto;padding:16px;border-right:1px solid var(--rule)}
+.col:last-child{border-right:0}
+.col h3{font-size:11px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px}
+.cat{margin-bottom:14px}
+.palette button{display:block;width:100%;text-align:left;margin:2px 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.node{border:1px solid var(--rule);border-radius:3px;padding:8px 10px;margin:4px 0;cursor:pointer;
+  display:flex;align-items:center;gap:8px;background:var(--paper)}
+.node.selected{border-color:var(--accent);background:var(--hi)}
+.node .grip{cursor:grab;color:var(--muted)}
+.node .type{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.node .summary{color:var(--muted);font-size:12px;margin-left:auto}
+.node .del{color:var(--muted);border:0;background:transparent;padding:0 4px}
+.slot{margin-left:18px;padding-left:10px;border-left:1px dotted var(--rule)}
+.slot-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 2px}
+.field{margin:8px 0}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+.field input,.field select,.field textarea{
+  width:100%;font:inherit;padding:6px 8px;background:transparent;border:1px solid var(--rule);
+  border-radius:3px;color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+.field textarea{min-height:64px;resize:vertical}
+.field .err{font-size:11px;color:var(--accent);margin-top:2px}
+#status{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);font-size:12px;padding:8px 0}
+</style>
+
+<header>
+  <div>
+    <a class="btn" href="/" style="margin-right:8px">←</a>
+    <input id="seqName" placeholder="Sequence name" />
+  </div>
+  <div class="actions">
+    <span id="status"></span>
+    <button onclick="testRun()">Test run</button>
+    <button class="primary" onclick="save()">Save</button>
+  </div>
+</header>
+
+<main>
+  <div class="col palette">
+    <h3>Palette</h3>
+    <div id="palette"></div>
+  </div>
+  <div class="col">
+    <h3>Sequence</h3>
+    <div id="tree"></div>
+  </div>
+  <div class="col">
+    <h3>Inspector</h3>
+    <div id="inspector"><div class="empty">Select a block.</div></div>
+  </div>
+</main>
+
+<script>
+const $ = sel => document.querySelector(sel);
+const params = new URLSearchParams(location.search);
+const seqId = params.get('id');
+
+let schema = null;     // { blocks:[], predicates:[], triggers:[] }
+let allSeqs = [];      // for re-saving the whole list
+let seq = null;        // current sequence
+let selPath = null;    // path to selected node, e.g. [0] or [0,'body',1]
+let nextLocalKey = 1;  // ephemeral ids for diff
+
+// ---- Boot ----
+(async function init(){
+  schema = await fetch('/api/schema').then(r=>r.json());
+  allSeqs = await fetch('/api/sequences').then(r=>r.json());
+  if (seqId) {
+    seq = allSeqs.find(s => s.id === seqId);
+  }
+  if (!seq) {
+    seq = { id:'', name:'New sequence', cooldownMs:60000, nodes:[] };
+    allSeqs.push(seq);
+  }
+  $('#seqName').value = seq.name;
+  $('#seqName').oninput = e => { seq.name = e.target.value; };
+  renderPalette();
+  renderTree();
+})();
+
+// ---- Palette ----
+function renderPalette(){
+  const cats = {};
+  for (const b of schema.blocks) {
+    (cats[b.category||'Other'] ||= []).push(b);
+  }
+  $('#palette').innerHTML = Object.keys(cats).sort().map(cat => `
+    <div class="cat">
+      <div class="slot-label">${cat}</div>
+      ${cats[cat].map(b => `<button onclick="addNode('${b.type}')">${b.label}</button>`).join('')}
+    </div>`).join('');
+}
+
+function blockSchema(type){ return schema.blocks.find(b => b.type === type); }
+function predicateSchema(type){ return schema.predicates.find(p => p.type === type); }
+
+function defaultParams(fields){
+  const p = {};
+  for (const f of fields) if (f.default !== undefined) {
+    if (f.type === 'int') p[f.key] = parseInt(f.default,10);
+    else if (f.type === 'bool') p[f.key] = f.default === 'true';
+    else p[f.key] = f.default;
+  }
+  return p;
+}
+
+function newNode(type){
+  const sch = blockSchema(type);
+  const node = { type, params:defaultParams(sch.fields||[]), children:{} };
+  if (sch.childSlots) for (const s of sch.childSlots) node.children[s] = [];
+  if (type === 'if') {
+    // seed predicate
+    const p0 = schema.predicates[0];
+    if (p0) node.params.predicate = { type:p0.type, params:defaultParams(p0.fields||[]) };
+  }
+  return node;
+}
+
+// ---- Path utils ----
+function getList(path){
+  // path = [] -> seq.nodes
+  // path = [i, slotName] -> seq.nodes[i].children[slotName]
+  // path = [i, slotName, j, slotName2] -> recurse
+  let cur = seq.nodes;
+  for (let i = 0; i + 1 < path.length; i += 2) {
+    cur = cur[path[i]].children[path[i+1]];
+  }
+  return cur;
+}
+function getNode(path){
+  if (!path) return null;
+  const list = getList(path.slice(0, -1));
+  return list[path[path.length - 1]];
+}
+function selectPath(path){ selPath = path; renderTree(); renderInspector(); }
+
+// ---- Tree ----
+function addNode(type){
+  // append at end of root or selected slot
+  let path = [];
+  if (selPath) {
+    const node = getNode(selPath);
+    const sch = blockSchema(node.type);
+    if (sch && sch.childSlots && sch.childSlots.length) {
+      const slot = sch.childSlots[0];
+      path = [...selPath, slot];
+    } else {
+      path = selPath.slice(0, -1);
+    }
+  }
+  const list = getList(path);
+  list.push(newNode(type));
+  selPath = [...path, list.length - 1];
+  renderTree(); renderInspector();
+}
+
+function deleteNode(path){
+  const list = getList(path.slice(0,-1));
+  list.splice(path[path.length-1], 1);
+  selPath = null;
+  renderTree(); renderInspector();
+}
+
+function moveNode(path, delta){
+  const list = getList(path.slice(0,-1));
+  const i = path[path.length-1];
+  const j = i + delta;
+  if (j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  selPath = [...path.slice(0,-1), j];
+  renderTree(); renderInspector();
+}
+
+function renderTree(){
+  $('#tree').innerHTML = renderList(seq.nodes, []) ||
+    '<div class="empty">Empty. Pick a block from the palette.</div>';
+  // attach handlers
+  document.querySelectorAll('[data-path]').forEach(el => {
+    el.onclick = ev => {
+      if (ev.target.tagName === 'BUTTON') return;
+      ev.stopPropagation();
+      selectPath(JSON.parse(el.dataset.path));
+    };
+  });
+}
+
+function renderList(list, basePath){
+  return list.map((n, i) => {
+    const path = [...basePath, i];
+    const sch = blockSchema(n.type);
+    const sel = selPath && JSON.stringify(selPath) === JSON.stringify(path);
+    const summary = renderSummary(n, sch);
+    let slots = '';
+    if (sch && sch.childSlots) {
+      slots = sch.childSlots.map(s => `
+        <div class="slot">
+          <div class="slot-label">${s}</div>
+          ${renderList(n.children[s] || [], [...path, s]) ||
+            '<div class="empty">empty</div>'}
+        </div>`).join('');
+    }
+    return `
+      <div class="node ${sel?'selected':''}" data-path='${JSON.stringify(path)}'>
+        <span class="grip">⋮⋮</span>
+        <span class="type">${n.type}</span>
+        <span class="summary">${summary||''}</span>
+        <button onclick='moveNode(${JSON.stringify(path)},-1)'>↑</button>
+        <button onclick='moveNode(${JSON.stringify(path)},1)'>↓</button>
+        <button class="del" onclick='deleteNode(${JSON.stringify(path)})'>✕</button>
+      </div>
+      ${slots}
+    `;
+  }).join('');
+}
+
+function renderSummary(n, sch){
+  if (!sch) return '?';
+  if (n.type === 'wait') return (n.params.ms||0) + 'ms';
+  if (n.type === 'repeat') return '× ' + (n.params.count||1);
+  if (n.type === 'wol') return n.params.mac || '';
+  if (n.type === 'wifi-hop') return n.params.target || '';
+  if (n.type === 'samsung-keys') return (n.params.keys||'').slice(0, 32);
+  if (n.type === 'if') return (n.params.predicate||{}).type || '';
+  return '';
+}
+
+// ---- Inspector ----
+function renderInspector(){
+  if (!selPath) { $('#inspector').innerHTML = '<div class="empty">Select a block.</div>'; return; }
+  const node = getNode(selPath);
+  const sch = blockSchema(node.type);
+  const html = (sch.fields||[]).map(f => fieldHtml(f, node.params[f.key], 'p_'+f.key)).join('');
+  $('#inspector').innerHTML = `
+    <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted);margin-bottom:8px">${node.type}</div>
+    ${html || '<div class="empty">No fields.</div>'}
+  `;
+  for (const f of sch.fields||[]) attachField(node, f, 'p_'+f.key);
+}
+
+function fieldHtml(f, val, id){
+  if (f.type === 'enum') {
+    const opts = (f.enum||'').split(',').map(o =>
+      `<option ${val===o?'selected':''}>${o}</option>`).join('');
+    return `<div class="field"><label>${f.label}</label><select id="${id}">${opts}</select></div>`;
+  }
+  if (f.type === 'bool') {
+    return `<div class="field"><label><input type="checkbox" id="${id}" ${val?'checked':''}> ${f.label}</label></div>`;
+  }
+  if (f.type === 'stringList') {
+    return `<div class="field"><label>${f.label}</label>
+      <textarea id="${id}" placeholder="comma-separated">${val||''}</textarea></div>`;
+  }
+  if (f.type === 'int') {
+    return `<div class="field"><label>${f.label}</label>
+      <input id="${id}" type="number" value="${val??''}"></div>`;
+  }
+  if (f.type === 'mac') {
+    return `<div class="field"><label>${f.label}</label>
+      <input id="${id}" placeholder="AA:BB:CC:DD:EE:FF" value="${val||''}"></div>`;
+  }
+  if (f.type === 'predicateRef') {
+    const cur = val || { type:'', params:{} };
+    const opts = schema.predicates.map(p => `<option value="${p.type}" ${cur.type===p.type?'selected':''}>${p.label}</option>`).join('');
+    const sub = predicateSchema(cur.type);
+    const subFields = sub ? (sub.fields||[]).map(sf => fieldHtml(sf, (cur.params||{})[sf.key], id+'_'+sf.key)).join('') : '';
+    return `<div class="field"><label>${f.label}</label>
+      <select id="${id}_type">${opts}</select>
+      <div style="margin-top:6px">${subFields}</div></div>`;
+  }
+  return `<div class="field"><label>${f.label}</label><input id="${id}" value="${val||''}"></div>`;
+}
+
+function attachField(node, f, id){
+  const set = v => { node.params[f.key] = v; };
+  if (f.type === 'predicateRef') {
+    const sel = document.getElementById(id+'_type');
+    sel.onchange = e => {
+      const sub = predicateSchema(e.target.value);
+      node.params[f.key] = { type: e.target.value, params: defaultParams(sub.fields||[]) };
+      renderInspector();
+    };
+    const sub = predicateSchema((node.params[f.key]||{}).type);
+    if (sub) for (const sf of sub.fields||[]) {
+      const el = document.getElementById(id+'_'+sf.key);
+      if (!el) continue;
+      el.oninput = e => {
+        node.params[f.key].params[sf.key] = sf.type === 'int'
+          ? parseInt(e.target.value,10) : e.target.value;
+      };
+    }
+    return;
+  }
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.oninput = e => {
+    let v = e.target.value;
+    if (f.type === 'int')   v = parseInt(v,10);
+    if (f.type === 'bool')  v = e.target.checked;
+    set(v);
+    if (['type','target','count','mac','keys','ms'].includes(f.key)) renderTree();
+  };
+}
+
+// ---- Save / run ----
+async function save(){
+  if (!seq.name) seq.name = 'untitled';
+  if (!allSeqs.includes(seq)) allSeqs.push(seq);
+  $('#status').textContent = 'saving …';
+  const r = await fetch('/api/sequences', {
+    method:'PUT', headers:{'content-type':'application/json'},
+    body: JSON.stringify(allSeqs),
+  });
+  if (!r.ok) { $('#status').textContent = 'save failed ' + r.status; return; }
+  const updated = await r.json();
+  if (!seq.id) {
+    const match = updated.find(s => s.name === seq.name && s.nodes.length === seq.nodes.length);
+    if (match) seq.id = match.id;
+  }
+  $('#status').textContent = 'saved';
+  if (seq.id && !location.search.includes(seq.id)) {
+    history.replaceState(null, '', '/edit?id=' + seq.id);
+  }
+}
+
+async function testRun(){
+  if (!seq.id) { await save(); }
+  $('#status').textContent = 'running …';
+  const r = await fetch('/api/run?id='+encodeURIComponent(seq.id),{method:'POST'});
+  $('#status').textContent = 'run ' + r.status + ': ' + await r.text();
+  poll();
+}
+async function poll(){
+  for (let i = 0; i < 60; i++) {
+    await new Promise(r=>setTimeout(r,500));
+    const s = await fetch('/api/status').then(r=>r.json());
+    $('#status').textContent = s.running ? 'running …' : (s.lastError ? ('error: '+s.lastError) : 'done');
+    if (!s.running) break;
+  }
+}
+</script>
