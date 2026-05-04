@@ -31,6 +31,9 @@ bool NetworkManager::connect(const String& ssid, const String& pass,
     uint32_t start = millis();
     while (millis() - start < timeout_ms) {
         if (WiFi.isConnected()) {
+            // Disable modem-sleep so HTTP responses don't wait for the next DTIM.
+            // Costs a bit of power but the device is mains-powered.
+            WiFi.setSleep(WIFI_PS_NONE);
             current_ = ssid;
             Serial.printf("[net] connected ip=%s rssi=%d\n",
                           WiFi.localIP().toString().c_str(), WiFi.RSSI());
