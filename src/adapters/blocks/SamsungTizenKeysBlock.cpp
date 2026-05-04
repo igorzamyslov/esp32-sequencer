@@ -59,7 +59,6 @@ public:
 };
 
 SamsungTizenKeysBlock& instance(){ static SamsungTizenKeysBlock i; return i; }
+struct _Reg { _Reg(){ Registry::instance().registerBlock(&instance()); } } _reg;
 
 }
-
-namespace seqb { void registerSamsungTizenKeysBlock() { Registry::instance().registerBlock(&instance()); } }

@@ -22,7 +22,6 @@ public:
 };
 
 OnWifiPredicate& instance(){ static OnWifiPredicate i; return i; }
+struct _Reg { _Reg(){ Registry::instance().registerPredicate(&instance()); } } _reg;
 
 }
-
-namespace seqb { void registerOnWifiPredicate() { Registry::instance().registerPredicate(&instance()); } }

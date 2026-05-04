@@ -30,7 +30,6 @@ public:
 };
 
 HostReachablePredicate& instance(){ static HostReachablePredicate i; return i; }
+struct _Reg { _Reg(){ Registry::instance().registerPredicate(&instance()); } } _reg;
 
 }
-
-namespace seqb { void registerHostReachablePredicate() { Registry::instance().registerPredicate(&instance()); } }

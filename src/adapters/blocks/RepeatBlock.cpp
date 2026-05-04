@@ -20,7 +20,6 @@ public:
 };
 
 RepeatBlock& instance(){ static RepeatBlock i; return i; }
+struct _Reg { _Reg(){ Registry::instance().registerBlock(&instance()); } } _reg;
 
 }
-
-namespace seqb { void registerRepeatBlock() { Registry::instance().registerBlock(&instance()); } }

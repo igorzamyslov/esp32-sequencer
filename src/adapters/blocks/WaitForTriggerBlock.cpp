@@ -24,7 +24,6 @@ public:
 };
 
 WaitForTriggerBlock& instance(){ static WaitForTriggerBlock i; return i; }
+struct _Reg { _Reg(){ Registry::instance().registerBlock(&instance()); } } _reg;
 
 }
-
-namespace seqb { void registerWaitForTriggerBlock() { Registry::instance().registerBlock(&instance()); } }
