@@ -147,7 +147,7 @@ void startBle() {
 
 void tryConnectIdle() {
     if (millis() < next_wifi_retry_ms_) return;
-    if (net.connectFritzbox()) {
+    if (net.connectIdle(cfg.idleSsid, cfg.idlePass)) {
         led.setState(LedState::Idle);
         wifi_ready_ = true;
         wifi_failures_ = 0;
@@ -168,8 +168,6 @@ void tryConnectIdle() {
 
 void enterRuntimeMode() {
     Serial.println("[boot] entering runtime mode");
-    net.configure(cfg.tplinkSsid, cfg.tplinkPass, cfg.fritzboxSsid, cfg.fritzboxPass);
-    net.configureTplinkStatic(cfg.tplinkStaticIp, cfg.tplinkGateway);
 
     seqStore  = new seqb::SequenceStore(persistence);
     trigStore = new seqb::TriggerStore(persistence);
@@ -232,7 +230,7 @@ void loop() {
                     led.setState(LedState::Success);
                 }
                 if (ble_started_ && trigMgr->anyPausesBleScan()) scanner.start(0);
-                if (!net.isConnected() || net.current() != WifiTarget::Fritzbox) {
+                if (!net.isConnected() || net.currentSsid() != cfg.idleSsid) {
                     wifi_ready_ = false;
                     next_wifi_retry_ms_ = millis() + 1000;
                 }

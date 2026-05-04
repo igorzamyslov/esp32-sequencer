@@ -11,13 +11,9 @@ namespace {
 
 Config Config::load() {
     Config c;
-    prefs().begin(NS, true); // read-only
-    c.tplinkSsid    = prefs().getString("tpSsid", "");
-    c.tplinkPass    = prefs().getString("tpPass", "");
-    c.tplinkStaticIp= prefs().getString("tpIp", "");
-    c.tplinkGateway = prefs().getString("tpGw", "");
-    c.fritzboxSsid  = prefs().getString("fbSsid", "");
-    c.fritzboxPass  = prefs().getString("fbPass", "");
+    prefs().begin(NS, true);
+    c.idleSsid      = prefs().getString("idleSsid", "");
+    c.idlePass      = prefs().getString("idlePass", "");
     c.tvToken       = prefs().getString("tvTok", "");
     c.setupFallback = prefs().getBool("sFb", false);
     prefs().end();
@@ -25,13 +21,9 @@ Config Config::load() {
 }
 
 void Config::save() const {
-    prefs().begin(NS, false); // read-write
-    prefs().putString("tpSsid", tplinkSsid);
-    prefs().putString("tpPass", tplinkPass);
-    prefs().putString("tpIp", tplinkStaticIp);
-    prefs().putString("tpGw", tplinkGateway);
-    prefs().putString("fbSsid", fritzboxSsid);
-    prefs().putString("fbPass", fritzboxPass);
+    prefs().begin(NS, false);
+    prefs().putString("idleSsid", idleSsid);
+    prefs().putString("idlePass", idlePass);
     prefs().putString("tvTok", tvToken);
     prefs().putBool("sFb", setupFallback);
     prefs().end();

@@ -6,7 +6,7 @@ using namespace seqb;
 namespace {
 
 constexpr FieldDef FIELDS[] = {
-    {"target", FieldType::Enum, "Network", "fritzbox", "tplink,fritzbox", true},
+    {"ssid", FieldType::String, "SSID", nullptr, nullptr, true},
 };
 constexpr PredicateSchema SCH = {"on-wifi", "On WiFi network", FIELDS, 1};
 
@@ -15,9 +15,9 @@ public:
     const PredicateSchema& schema() const override { return SCH; }
     bool test(JsonVariantConst params, RunCtx& ctx) override {
         if (!ctx.net) return false;
-        const char* t = params["target"].as<const char*>();
-        WifiTarget target = (t && std::string(t) == "tplink") ? WifiTarget::TpLink : WifiTarget::Fritzbox;
-        return ctx.net->current() == target;
+        const char* ssid = params["ssid"].as<const char*>();
+        if (!ssid) return false;
+        return ctx.net->isConnected() && ctx.net->currentSsid() == String(ssid);
     }
 };
 

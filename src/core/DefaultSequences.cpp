@@ -12,13 +12,16 @@ DefaultsResult buildDefaults() {
     wake.cooldownMs = 60000;
 
     {
-        Node n = leaf("wifi-hop"); n.params["target"] = "tplink"; wake.nodes.push_back(n);
+        // Hop to the network where the PC is reachable for WoL. Fill ssid/password
+        // (and optional static_ip/gateway) in the editor.
+        Node n = leaf("wifi-hop"); wake.nodes.push_back(n);
     }
     {
         Node n = leaf("wol"); n.params["mac"] = ""; wake.nodes.push_back(n);
     }
     {
-        Node n = leaf("wifi-hop"); n.params["target"] = "fritzbox"; wake.nodes.push_back(n);
+        // Hop back to the idle network. Fill in the same SSID/password as in /settings.
+        Node n = leaf("wifi-hop"); wake.nodes.push_back(n);
     }
     {
         Node n = leaf("wol"); n.params["mac"] = ""; wake.nodes.push_back(n);
