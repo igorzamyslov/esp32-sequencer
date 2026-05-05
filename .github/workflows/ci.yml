@@ -19,6 +19,10 @@ jobs:
         with:
           python-version: "3.12"
       - uses: pre-commit/action@v3.0.1
+        env:
+          # `no-commit-to-branch` would always fail when run on main itself.
+          # The hook still fires for direct local commits — its purpose.
+          SKIP: no-commit-to-branch
 
   native-tests:
     name: native unit tests

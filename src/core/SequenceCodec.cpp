@@ -41,9 +41,9 @@ void encodeNode(JsonObject dst, const Node& src) {
         dst["params"].set(src.params.as<JsonVariantConst>());
     }
     JsonObject ch = dst["children"].to<JsonObject>();
-    for (auto& kv : src.children) {
+    for (const auto& kv : src.children) {
         JsonArray arr = ch[kv.first].to<JsonArray>();
-        for (auto& child : kv.second) {
+        for (const auto& child : kv.second) {
             JsonObject co = arr.add<JsonObject>();
             encodeNode(co, child);
         }
@@ -79,13 +79,13 @@ std::vector<Sequence> SequenceCodec::decodeList(const char* json) {
 std::string SequenceCodec::encodeList(const std::vector<Sequence>& seqs) {
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
-    for (auto& s : seqs) {
+    for (const auto& s : seqs) {
         JsonObject o = arr.add<JsonObject>();
         o["id"] = s.id;
         o["name"] = s.name;
         o["cooldownMs"] = s.cooldownMs;
         JsonArray nodes = o["nodes"].to<JsonArray>();
-        for (auto& n : s.nodes) {
+        for (const auto& n : s.nodes) {
             JsonObject no = nodes.add<JsonObject>();
             encodeNode(no, n);
         }
@@ -114,7 +114,7 @@ std::vector<TriggerBinding> SequenceCodec::decodeTriggers(const char* json) {
 std::string SequenceCodec::encodeTriggers(const std::vector<TriggerBinding>& ts) {
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
-    for (auto& t : ts) {
+    for (const auto& t : ts) {
         JsonObject o = arr.add<JsonObject>();
         o["id"] = t.id;
         o["type"] = t.type;

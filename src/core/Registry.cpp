@@ -76,10 +76,10 @@ static void writeFields(JsonArray dst, const FieldDef* f, std::size_t n) {
 
 std::string Registry::dumpSchemaJson() const {
     JsonDocument doc;
-    JsonArray blocks = doc["blocks"].to<JsonArray>();
-    for (auto& kv : blocks_) {
+    JsonArray blockArr = doc["blocks"].to<JsonArray>();
+    for (const auto& kv : blocks_) {
         const auto& s = kv.second->schema();
-        JsonObject o = blocks.add<JsonObject>();
+        JsonObject o = blockArr.add<JsonObject>();
         o["type"] = s.type;
         o["label"] = s.label;
         o["category"] = s.category;
@@ -88,18 +88,18 @@ std::string Registry::dumpSchemaJson() const {
         for (std::size_t i = 0; i < s.childSlotCount; ++i)
             slots.add(s.childSlots[i]);
     }
-    JsonArray preds = doc["predicates"].to<JsonArray>();
-    for (auto& kv : predicates_) {
+    JsonArray predArr = doc["predicates"].to<JsonArray>();
+    for (const auto& kv : predicates_) {
         const auto& s = kv.second->schema();
-        JsonObject o = preds.add<JsonObject>();
+        JsonObject o = predArr.add<JsonObject>();
         o["type"] = s.type;
         o["label"] = s.label;
         writeFields(o["fields"].to<JsonArray>(), s.fields, s.fieldCount);
     }
-    JsonArray trigs = doc["triggers"].to<JsonArray>();
-    for (auto& kv : triggers_) {
+    JsonArray trigArr = doc["triggers"].to<JsonArray>();
+    for (const auto& kv : triggers_) {
         const auto& s = kv.second->schema();
-        JsonObject o = trigs.add<JsonObject>();
+        JsonObject o = trigArr.add<JsonObject>();
         o["type"] = s.type;
         o["label"] = s.label;
         o["pausesBleScan"] = s.pausesBleScan;

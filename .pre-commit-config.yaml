@@ -1,15 +1,16 @@
 # Run on demand:
-#   pre-commit run --all-files
+#   uv run pre-commit run --all-files
 # Install once so it runs automatically on commit:
-#   pre-commit install --install-hooks
-#   pre-commit install --hook-type commit-msg
+#   uv run pre-commit install --install-hooks
+#   uv run pre-commit install --hook-type commit-msg
 
 exclude: |
   (?x)^(
     \.pio/.*|
     \.cache/.*|
     src/web/web_assets\.h|
-    compile_commands\.json
+    compile_commands\.json|
+    uv\.lock
   )$
 
 repos:
@@ -24,7 +25,7 @@ repos:
         args: [--fix=lf]
       - id: check-merge-conflict
       - id: check-added-large-files
-        args: [--maxkb=200]
+        args: [--maxkb=100]
       - id: check-yaml
       - id: check-json
       - id: check-toml
@@ -35,6 +36,21 @@ repos:
       - id: destroyed-symlinks
       - id: detect-private-key
       - id: forbid-submodules
+      - id: check-vcs-permalinks
+      - id: check-builtin-literals
+      - id: fix-byte-order-marker
+      - id: no-commit-to-branch
+        args: [--branch, main]
+
+  # ----- Mojibake / unicode hygiene -----------------------------------------
+  - repo: https://github.com/sirosen/texthooks
+    rev: 0.6.7
+    hooks:
+      - id: forbid-bidi-controls
+      - id: fix-smartquotes
+        # Docs use "smart quotes" intentionally; HTML may have prose with them.
+        exclude: ^(docs/|src/web/.*\.html|README\.md)
+      - id: fix-ligatures
 
   # ----- Secrets -------------------------------------------------------------
   - repo: https://github.com/gitleaks/gitleaks
@@ -42,14 +58,61 @@ repos:
     hooks:
       - id: gitleaks
 
-  # ----- C/C++ ---------------------------------------------------------------
+  # ----- Spelling ------------------------------------------------------------
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.3.0
+    hooks:
+      - id: codespell
+        additional_dependencies: [tomli]
+        # Config: [tool.codespell] in pyproject.toml.
+
+  # ----- GitHub Actions ------------------------------------------------------
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.4
+    hooks:
+      - id: actionlint
+
+  # ----- Shell ---------------------------------------------------------------
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.10.0-2
+    hooks:
+      - id: shfmt
+        args: [--indent, "2", --binary-next-line, --case-indent, --simplify]
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+
+  # ----- C/C++ formatting ----------------------------------------------------
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v18.1.8
     hooks:
       - id: clang-format
         types_or: [c++, c]
-        # The platform headers in adapters pull in Arduino — formatting them
-        # is fine, but the ".clangd" diagnostics noise should not affect this.
+
+  # ----- C++ static analysis -------------------------------------------------
+  # cppcheck must be installed locally (`brew install cppcheck` or
+  # `apt install cppcheck`). The hook just shells out to the system binary.
+  - repo: https://github.com/pocc/pre-commit-hooks
+    rev: v1.3.5
+    hooks:
+      - id: cppcheck
+        args:
+          - --enable=warning,style,performance,portability
+          - --inline-suppr
+          - --suppress=missingIncludeSystem
+          - --suppress=missingInclude
+          - --suppress=unusedFunction
+          - --suppress=unmatchedSuppression
+          - --suppress=unusedStructMember
+          - --suppress=passedByValue:src/adapters/triggers/HttpRouteTrigger.cpp
+          - --error-exitcode=1
+          - --std=c++17
+          - --language=c++
+          - --quiet
+        # Adapter cpps include Arduino headers cppcheck can't find. Limit to
+        # the platform-independent core for now.
+        files: ^src/core/.*\.(cpp|h)$
 
   # ----- Python --------------------------------------------------------------
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -65,13 +128,8 @@ repos:
     hooks:
       - id: markdownlint
         args: [--config, .markdownlint.yaml]
-        # docs/superpowers/ holds frozen specs and plans — leave them as-is.
+        # Frozen specs/plans intentionally retained as-is.
         exclude: ^docs/superpowers/
-
-  # ----- HTML / CSS / JS (formatting only — no semantic linting) ------------
-  # Skipped intentionally: the web/*.html files have inline <script>/<style>
-  # blocks tuned for size in PROGMEM. Prettier would reflow them aggressively.
-  # If you want JS linting later, eslint flat-config can be added.
 
   # ----- Commit messages -----------------------------------------------------
   - repo: https://github.com/compilerla/conventional-pre-commit

@@ -1,5 +1,6 @@
 #include "SequenceStore.h"
 #include "SequenceCodec.h"
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 
@@ -32,9 +33,9 @@ void SequenceStore::replaceAll(std::vector<Sequence> seqs) {
 }
 
 const Sequence* SequenceStore::findById(const std::string& id) const {
-    for (auto& s : seqs_)
-        if (s.id == id) return &s;
-    return nullptr;
+    auto it =
+        std::find_if(seqs_.begin(), seqs_.end(), [&id](const Sequence& s) { return s.id == id; });
+    return it == seqs_.end() ? nullptr : &*it;
 }
 
 }  // namespace seqb
