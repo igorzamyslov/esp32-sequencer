@@ -6,21 +6,19 @@ using namespace seqb;
 namespace {
 
 constexpr FieldDef FIELDS[] = {
-    {"count",       FieldType::Int, "Iterations",                "1", nullptr, true},
-    {"interval_ms", FieldType::Int, "Wait between iterations (ms)", "0", nullptr, false},
+    {"text", FieldType::String, "Caption", "—", nullptr, false},
 };
-constexpr const char* SLOTS[] = {"body"};
-constexpr BlockSchema SCH = {"repeat", "Repeat", "Flow", FIELDS, 2, SLOTS, 1};
+constexpr BlockSchema SCH = {"divider", "Divider", "Flow", FIELDS, 1, nullptr, 0};
 
-class RepeatBlock : public Block {
+class DividerBlock : public Block {
 public:
     const BlockSchema& schema() const override { return SCH; }
-    // Never called: interpreter handles "repeat" intrinsically.
+    // Visual-only: interpreter recognises the type and skips it.
     RunResult run(JsonVariantConst, const std::map<std::string, std::vector<Node>>&,
                   RunCtx&, Interpreter&) override { return RunResult::ok(); }
 };
 
-RepeatBlock& instance(){ static RepeatBlock i; return i; }
+DividerBlock& instance(){ static DividerBlock i; return i; }
 struct _Reg { _Reg(){ Registry::instance().registerBlock(&instance()); } } _reg;
 
 }

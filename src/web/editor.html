@@ -4,60 +4,134 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 :root{
-  --ink:#111; --paper:#fafaf7; --muted:#666; --rule:#d8d6cf; --accent:#c8553d; --hi:#fff7c2;
+  --paper:#f3eddc; --hi:#ebe2c8; --ink:#1f1c14; --ink-2:#5a544a; --ink-3:#8b8579;
+  --rule:#c9c1ad; --rule-2:#dcd5c3; --accent:#7a1f17; --warn:#a4540a; --ok:#446644;
+  --serif:"Iowan Old Style","Hoefler Text",Garamond,"Apple Garamond","Times New Roman",Georgia,serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
 }
 @media (prefers-color-scheme:dark){
-  :root{ --ink:#e9e7e0; --paper:#15140f; --muted:#9b988e; --rule:#33312b; --accent:#e87a64; --hi:#3b3520; }
+  :root{ --paper:#0a0a08; --hi:#1a1308; --ink:#f9c069; --ink-2:#b88450; --ink-3:#6e5638;
+         --rule:#3a2c1a; --rule-2:#251c10; --accent:#ff7a5c; --warn:#e09a3a; --ok:#9bc78e; }
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--paper);color:var(--ink);
-  font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
-header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;
-  border-bottom:1px solid var(--rule);background:var(--paper);position:sticky;top:0;z-index:10}
-header input{font:inherit;border:1px solid transparent;border-radius:3px;padding:4px 6px;background:transparent;color:var(--ink);min-width:280px}
-header input:focus{outline:none;border-color:var(--rule)}
-header .actions{display:flex;gap:8px}
-button,a.btn{font:inherit;padding:6px 12px;border:1px solid var(--rule);background:transparent;
-  color:var(--ink);border-radius:3px;cursor:pointer;text-decoration:none}
-button:hover{border-color:var(--ink)}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-main{display:grid;grid-template-columns:220px 1fr 320px;gap:0;height:calc(100vh - 49px)}
-@media (max-width:900px){ main{grid-template-columns:1fr;height:auto} }
-.col{overflow-y:auto;padding:16px;border-right:1px solid var(--rule)}
+html,body{margin:0;background:var(--paper);color:var(--ink);font:13.5px/1.5 var(--mono);-webkit-font-smoothing:antialiased}
+
+header{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
+  padding:10px 18px;border-bottom:1px solid var(--ink);background:var(--paper);position:sticky;top:0;z-index:10}
+header .home{font:italic 18px/1 var(--serif);color:var(--ink);text-decoration:none;border:none;padding:0 2px}
+header .home:hover{color:var(--accent)}
+header .meta{display:flex;gap:14px;align-items:baseline;min-width:0}
+header .meta input{font:400 22px/1.1 var(--serif);letter-spacing:-0.005em;border:0;background:transparent;color:var(--ink);min-width:280px;padding:2px 0;border-bottom:1px solid transparent}
+header .meta input:focus{outline:none;border-bottom-color:var(--rule)}
+header .cd{display:flex;align-items:baseline;gap:6px;font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.16em;white-space:nowrap}
+header .cd input{width:74px;font:13px/1 var(--mono);text-align:right;border:0;border-bottom:1px solid var(--rule);background:transparent;color:var(--ink);padding:2px 4px}
+header .cd input:focus{outline:none;border-bottom-color:var(--ink)}
+header .actions{display:flex;gap:6px;align-items:center}
+
+button,a.btn{font:12px/1 var(--mono);letter-spacing:.04em;padding:7px 11px;background:transparent;
+  border:1px solid var(--rule);color:var(--ink);text-decoration:none;cursor:pointer;text-transform:lowercase;
+  transition:border-color .12s,background .12s,color .12s}
+button:hover,a.btn:hover{border-color:var(--ink);background:var(--hi)}
+button.primary{border-color:var(--ink)}
+button.primary.dirty{border-color:var(--accent);color:var(--accent)}
+button.primary.dirty::before{content:"● "}
+button:disabled{opacity:.45;cursor:wait}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ink-3);margin:0 6px 0 2px}
+.dot.dirty{background:var(--accent)}
+.dot.clean{background:var(--ok)}
+
+main{display:grid;grid-template-columns:230px 1fr 340px;height:calc(100vh - 53px)}
+@media (max-width:980px){main{grid-template-columns:1fr;height:auto}}
+.col{overflow-y:auto;padding:18px 20px;border-right:1px solid var(--rule)}
 .col:last-child{border-right:0}
-.col h3{font-size:11px;font-weight:600;color:var(--muted);
-  text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px}
-.cat{margin-bottom:14px}
-.palette button{display:block;width:100%;text-align:left;margin:2px 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
-.node{border:1px solid var(--rule);border-radius:3px;padding:8px 10px;margin:4px 0;cursor:pointer;
-  display:flex;align-items:center;gap:8px;background:var(--paper)}
-.node.selected{border-color:var(--accent);background:var(--hi)}
-.node .grip{cursor:grab;color:var(--muted)}
-.node .type{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
-.node .summary{color:var(--muted);font-size:12px;margin-left:auto}
-.node .del{color:var(--muted);border:0;background:transparent;padding:0 4px}
-.slot{margin-left:18px;padding-left:10px;border-left:1px dotted var(--rule)}
-.slot-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 2px}
-.field{margin:8px 0}
-.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+.col h3{font:11px/1 var(--mono);font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.18em;
+  margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.col h3::after{content:"";flex:1;border-top:1px solid var(--rule)}
+
+/* --- Palette --- */
+.cat{margin-bottom:16px}
+.cat .lab{font:10.5px/1.2 var(--mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.18em;margin:0 0 4px}
+.palette button{display:block;width:100%;text-align:left;margin:2px 0;padding:6px 8px;font-size:12px}
+.clip{margin-top:14px;padding:10px;border:1px dashed var(--rule);font-size:11px;color:var(--ink-2)}
+.clip strong{display:block;font:italic 14px/1.2 var(--serif);color:var(--ink);margin-bottom:4px}
+.clip .clip-actions{display:flex;gap:6px;margin-top:8px}
+
+/* --- Sequence tree --- */
+.node{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;
+  padding:9px 11px;margin:5px 0;background:var(--paper);
+  border:1px solid var(--rule-2);border-left:3px solid var(--rule);
+  cursor:pointer;transition:border-color .1s,background .1s}
+.node:hover{border-left-color:var(--ink-3);background:var(--hi)}
+.node.selected{border-color:var(--ink);border-left-color:var(--accent);background:var(--hi)}
+.node.disabled{opacity:.45}
+.node.disabled .label{text-decoration:line-through}
+.node.invalid{border-left-color:var(--warn)}
+.node .badge{font:italic 14px/1 var(--serif);color:var(--ink-3);min-width:22px}
+.node .body{min-width:0;display:flex;flex-direction:column}
+.node .label{font:italic 15px/1.25 var(--serif);color:var(--ink);font-feature-settings:"onum"}
+.node .label.empty{font-style:normal;color:var(--ink-3);font:11.5px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.12em}
+.node .info{font:11.5px/1.35 var(--mono);color:var(--ink-2);margin-top:2px;display:flex;flex-wrap:wrap;gap:0 10px}
+.node .info .type{color:var(--ink-3);text-transform:uppercase;letter-spacing:.12em;font-size:10.5px}
+.node .info .summary{}
+.node .info .miss{color:var(--warn);font-weight:600}
+.node .info .miss::before{content:"⚠ "}
+.node .ctrl{display:flex;gap:2px;opacity:0;transition:opacity .1s}
+.node:hover .ctrl,.node.selected .ctrl{opacity:1}
+.node .ctrl button{padding:4px 7px;font-size:11px;border-color:transparent;background:transparent;color:var(--ink-2)}
+.node .ctrl button:hover{border-color:var(--rule);color:var(--ink);background:var(--paper)}
+.node .ctrl button.danger:hover{border-color:var(--accent);color:var(--accent)}
+
+.node.divider{border:0;border-top:1px solid var(--rule);background:transparent;
+  border-left:0;padding:14px 0 6px;margin:14px 0 6px;
+  display:flex;align-items:baseline;gap:10px}
+.node.divider .badge{display:none}
+.node.divider .body{flex:1;flex-direction:row;align-items:baseline;gap:10px}
+.node.divider .label{font:italic 13px/1 var(--serif);color:var(--ink-2);font-size:14px}
+.node.divider::after{content:"";flex:1;border-bottom:1px dotted var(--rule);margin-left:8px;align-self:center}
+.node.divider.selected{background:var(--hi);padding:14px 11px 8px}
+
+.slot{margin-left:14px;padding-left:14px;border-left:1px dashed var(--rule)}
+.slot-label{font:10.5px/1.2 var(--mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.18em;margin:8px 0 2px}
+.empty-tree{padding:18px 0;color:var(--ink-3);font-style:italic;font-family:var(--serif)}
+
+/* --- Inspector --- */
+.field{margin:10px 0}
+.field label{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-2);margin-bottom:3px;
+  text-transform:uppercase;letter-spacing:.1em;align-items:baseline}
+.field label .req{color:var(--accent);font-size:10px;letter-spacing:.04em;text-transform:lowercase;font-style:italic;font-family:var(--serif)}
 .field input,.field select,.field textarea{
-  width:100%;font:inherit;padding:6px 8px;background:transparent;border:1px solid var(--rule);
-  border-radius:3px;color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+  width:100%;font:13px/1.4 var(--mono);padding:7px 9px;background:var(--paper);
+  border:1px solid var(--rule);color:var(--ink)}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--ink)}
+.field input.missing,.field select.missing,.field textarea.missing{border-color:var(--warn);background:var(--hi)}
 .field textarea{min-height:64px;resize:vertical}
-.field .err{font-size:11px;color:var(--accent);margin-top:2px}
-#status{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted)}
-.empty{color:var(--muted);font-size:12px;padding:8px 0}
+.field .hint{font-size:11px;color:var(--ink-3);margin-top:3px;font-style:italic;font-family:var(--serif)}
+.insp-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--rule-2)}
+.insp-head .ty{font:10.5px/1 var(--mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.18em}
+.insp-head .toggle{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--ink-2)}
+.insp-head input[type=checkbox]{width:auto;margin:0}
+
+/* --- Status console --- */
+#status{display:flex;align-items:center;gap:8px;font:11.5px/1 var(--mono);color:var(--ink-2);max-width:340px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#status .spin{display:inline-block;width:10px;height:10px;border:1.5px solid var(--ink-3);border-top-color:var(--ink);border-radius:50%;animation:spin .9s linear infinite}
+#status.err{color:var(--accent)}
+#status.ok{color:var(--ok)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* misc */
+.kbd{font:10.5px/1 var(--mono);padding:2px 5px;border:1px solid var(--rule);color:var(--ink-3);margin-left:6px}
 </style>
 
 <header>
-  <div>
-    <a class="btn" href="/" style="margin-right:8px">←</a>
+  <a class="home" href="/" title="back">‹</a>
+  <div class="meta">
     <input id="seqName" placeholder="Sequence name" />
+    <span class="cd">cooldown <input id="cooldown" type="number" min="0" step="1000" />ms</span>
   </div>
   <div class="actions">
     <span id="status"></span>
-    <button onclick="testRun()">Test run</button>
-    <button class="primary" onclick="save()">Save</button>
+    <button id="btnTest" onclick="testRun()">test run</button>
+    <button id="btnSave" class="primary" onclick="save()">save<span class="kbd">⌘S</span></button>
   </div>
 </header>
 
@@ -65,6 +139,7 @@ main{display:grid;grid-template-columns:220px 1fr 320px;gap:0;height:calc(100vh 
   <div class="col palette">
     <h3>Palette</h3>
     <div id="palette"></div>
+    <div id="clip" class="clip" hidden></div>
   </div>
   <div class="col">
     <h3>Sequence</h3>
@@ -72,7 +147,7 @@ main{display:grid;grid-template-columns:220px 1fr 320px;gap:0;height:calc(100vh 
   </div>
   <div class="col">
     <h3>Inspector</h3>
-    <div id="inspector"><div class="empty">Select a block.</div></div>
+    <div id="inspector"><div class="empty-tree">Select a block.</div></div>
   </div>
 </main>
 
@@ -81,11 +156,12 @@ const $ = sel => document.querySelector(sel);
 const params = new URLSearchParams(location.search);
 const seqId = params.get('id');
 
-let schema = null;     // { blocks:[], predicates:[], triggers:[] }
-let allSeqs = [];      // for re-saving the whole list
-let seq = null;        // current sequence
-let selPath = null;    // path to selected node, e.g. [0] or [0,'body',1]
-let nextLocalKey = 1;  // ephemeral ids for diff
+let schema = null;
+let allSeqs = [];
+let seq = null;
+let selPath = null;
+let clipboard = null;
+let dirty = false;
 
 // ---- Boot ----
 function normalizeNode(n){
@@ -93,70 +169,99 @@ function normalizeNode(n){
   if (!n.children) n.children = {};
   for (const k of Object.keys(n.children)) (n.children[k]||[]).forEach(normalizeNode);
 }
+
+setStatus('loading…', {spin:true});
 (async function init(){
-  schema = await fetch('/api/schema').then(r=>r.json());
-  allSeqs = await fetch('/api/sequences').then(r=>r.json());
+  try{
+    [schema, allSeqs] = await Promise.all([
+      fetch('/api/schema').then(r=>r.json()),
+      fetch('/api/sequences').then(r=>r.json()),
+    ]);
+  }catch(e){ setStatus('failed: '+e, {err:true}); return; }
   for (const s of allSeqs) (s.nodes||[]).forEach(normalizeNode);
-  if (seqId) {
-    seq = allSeqs.find(s => s.id === seqId);
-  }
+  if (seqId) seq = allSeqs.find(s => s.id === seqId);
   if (!seq) {
     seq = { id:'', name:'New sequence', cooldownMs:60000, nodes:[] };
     allSeqs.push(seq);
   }
   $('#seqName').value = seq.name;
-  $('#seqName').oninput = e => { seq.name = e.target.value; };
+  $('#cooldown').value = seq.cooldownMs ?? 60000;
+  $('#seqName').oninput = e => { seq.name = e.target.value; markDirty(); };
+  $('#cooldown').oninput = e => { seq.cooldownMs = parseInt(e.target.value,10)||0; markDirty(); };
+  setStatus('');
   renderPalette();
   renderTree();
+  renderClip();
 })();
+
+window.addEventListener('beforeunload', e => {
+  if (dirty){ e.preventDefault(); e.returnValue = ''; }
+});
+window.addEventListener('keydown', e => {
+  if ((e.metaKey||e.ctrlKey) && e.key === 's'){ e.preventDefault(); save(); }
+  if ((e.metaKey||e.ctrlKey) && e.key === 'd' && selPath){
+    e.preventDefault(); duplicateSelected();
+  }
+  if (e.key === 'Escape'){ selPath=null; renderTree(); renderInspector(); }
+  if (e.key === 'Delete' && selPath){
+    e.preventDefault();
+    deleteNode(selPath);
+  }
+});
+
+function markDirty(){ dirty = true; updateDirtyUI(); }
+function clearDirty(){ dirty = false; updateDirtyUI(); }
+function updateDirtyUI(){ $('#btnSave').classList.toggle('dirty', dirty); }
+
+// ---- Status ----
+function setStatus(msg, opts){
+  const el = $('#status');
+  el.classList.remove('err','ok');
+  if (opts && opts.err) el.classList.add('err');
+  if (opts && opts.ok)  el.classList.add('ok');
+  el.innerHTML = '';
+  if (opts && opts.spin){ const s=document.createElement('span'); s.className='spin'; el.appendChild(s); }
+  if (msg){ el.appendChild(document.createTextNode(msg)); }
+}
 
 // ---- Palette ----
 function renderPalette(){
   const cats = {};
-  for (const b of schema.blocks) {
-    (cats[b.category||'Other'] ||= []).push(b);
-  }
+  for (const b of schema.blocks) (cats[b.category||'Other'] ||= []).push(b);
   $('#palette').innerHTML = Object.keys(cats).sort().map(cat => `
     <div class="cat">
-      <div class="slot-label">${cat}</div>
-      ${cats[cat].map(b => `<button onclick="addNode('${b.type}')">${b.label}</button>`).join('')}
+      <div class="lab">${cat}</div>
+      ${cats[cat].map(b => `<button data-add="${b.type}">${b.label}</button>`).join('')}
     </div>`).join('');
+  $('#palette').querySelectorAll('[data-add]').forEach(b => b.onclick = ()=>addNode(b.dataset.add));
 }
 
-function blockSchema(type){ return schema.blocks.find(b => b.type === type); }
-function predicateSchema(type){ return schema.predicates.find(p => p.type === type); }
-
+function blockSchema(t){ return schema.blocks.find(b => b.type === t); }
+function predicateSchema(t){ return schema.predicates.find(p => p.type === t); }
 function defaultParams(fields){
   const p = {};
-  for (const f of fields) if (f.default !== undefined) {
+  for (const f of fields||[]) if (f.default !== undefined) {
     if (f.type === 'int') p[f.key] = parseInt(f.default,10);
     else if (f.type === 'bool') p[f.key] = f.default === 'true';
     else p[f.key] = f.default;
   }
   return p;
 }
-
 function newNode(type){
   const sch = blockSchema(type);
-  const node = { type, params:defaultParams(sch.fields||[]), children:{} };
+  const node = { type, params:defaultParams(sch.fields), children:{} };
   if (sch.childSlots) for (const s of sch.childSlots) node.children[s] = [];
   if (type === 'if') {
-    // seed predicate
     const p0 = schema.predicates[0];
-    if (p0) node.params.predicate = { type:p0.type, params:defaultParams(p0.fields||[]) };
+    if (p0) node.params.predicate = { type:p0.type, params:defaultParams(p0.fields) };
   }
   return node;
 }
 
 // ---- Path utils ----
 function getList(path){
-  // path = [] -> seq.nodes
-  // path = [i, slotName] -> seq.nodes[i].children[slotName]
-  // path = [i, slotName, j, slotName2] -> recurse
   let cur = seq.nodes;
-  for (let i = 0; i + 1 < path.length; i += 2) {
-    cur = cur[path[i]].children[path[i+1]];
-  }
+  for (let i = 0; i + 1 < path.length; i += 2) cur = cur[path[i]].children[path[i+1]];
   return cur;
 }
 function getNode(path){
@@ -164,35 +269,31 @@ function getNode(path){
   const list = getList(path.slice(0, -1));
   return list[path[path.length - 1]];
 }
-function selectPath(path){ selPath = path; renderTree(); renderInspector(); }
+function selectPath(p){ selPath = p; renderTree(); renderInspector(); }
 
-// ---- Tree ----
+// ---- Tree edits ----
+function targetPathForInsertion(){
+  // Default: root. If a block with childSlots is selected, append to its first slot.
+  // Otherwise, insert after the selected block in its parent list.
+  if (!selPath) return [];
+  const node = getNode(selPath);
+  const sch = blockSchema(node.type);
+  if (sch && sch.childSlots && sch.childSlots.length) return [...selPath, sch.childSlots[0]];
+  return selPath.slice(0, -1);
+}
 function addNode(type){
-  // append at end of root or selected slot
-  let path = [];
-  if (selPath) {
-    const node = getNode(selPath);
-    const sch = blockSchema(node.type);
-    if (sch && sch.childSlots && sch.childSlots.length) {
-      const slot = sch.childSlots[0];
-      path = [...selPath, slot];
-    } else {
-      path = selPath.slice(0, -1);
-    }
-  }
+  const path = targetPathForInsertion();
   const list = getList(path);
   list.push(newNode(type));
   selPath = [...path, list.length - 1];
-  renderTree(); renderInspector();
+  markDirty(); renderTree(); renderInspector();
 }
-
 function deleteNode(path){
   const list = getList(path.slice(0,-1));
   list.splice(path[path.length-1], 1);
   selPath = null;
-  renderTree(); renderInspector();
+  markDirty(); renderTree(); renderInspector();
 }
-
 function moveNode(path, delta){
   const list = getList(path.slice(0,-1));
   const i = path[path.length-1];
@@ -200,48 +301,146 @@ function moveNode(path, delta){
   if (j < 0 || j >= list.length) return;
   [list[i], list[j]] = [list[j], list[i]];
   selPath = [...path.slice(0,-1), j];
-  renderTree(); renderInspector();
+  markDirty(); renderTree(); renderInspector();
+}
+function deepClone(n){ return JSON.parse(JSON.stringify(n)); }
+function copyNode(path){
+  clipboard = deepClone(getNode(path));
+  setStatus('copied · paste with ⌘V', {ok:true});
+  setTimeout(()=>setStatus(''), 1800);
+  renderClip();
+}
+function cutNode(path){
+  clipboard = deepClone(getNode(path));
+  deleteNode(path);
+  renderClip();
+}
+function pasteHere(){
+  if (!clipboard) return;
+  const path = targetPathForInsertion();
+  const list = getList(path);
+  list.push(deepClone(clipboard));
+  selPath = [...path, list.length - 1];
+  markDirty(); renderTree(); renderInspector();
+}
+function clearClip(){ clipboard = null; renderClip(); }
+function duplicateSelected(){
+  if (!selPath) return;
+  const list = getList(selPath.slice(0,-1));
+  const i = selPath[selPath.length-1];
+  list.splice(i+1, 0, deepClone(list[i]));
+  selPath = [...selPath.slice(0,-1), i+1];
+  markDirty(); renderTree(); renderInspector();
+}
+window.addEventListener('keydown', e => {
+  if ((e.metaKey||e.ctrlKey) && e.key === 'v' && clipboard){ e.preventDefault(); pasteHere(); }
+});
+
+function renderClip(){
+  const el = $('#clip');
+  if (!clipboard){ el.hidden = true; return; }
+  el.hidden = false;
+  const lab = clipboard.params && clipboard.params._label;
+  el.innerHTML = `<strong>${escapeHtml(lab||clipboard.type)}</strong>
+    <span style="color:var(--ink-3)">${escapeHtml(clipboard.type)}</span>
+    <div class="clip-actions">
+      <button onclick="pasteHere()">paste here</button>
+      <button onclick="clearClip()">clear</button>
+    </div>`;
 }
 
+// ---- Tree render ----
 function renderTree(){
   $('#tree').innerHTML = renderList(seq.nodes, []) ||
-    '<div class="empty">Empty. Pick a block from the palette.</div>';
-  // attach handlers
-  document.querySelectorAll('[data-path]').forEach(el => {
+    '<div class="empty-tree">Empty. Pick a block from the palette.</div>';
+  $('#tree').querySelectorAll('[data-path]').forEach(el => {
     el.onclick = ev => {
       if (ev.target.tagName === 'BUTTON') return;
       ev.stopPropagation();
       selectPath(JSON.parse(el.dataset.path));
     };
   });
+  $('#tree').querySelectorAll('[data-act]').forEach(b => {
+    b.onclick = ev => {
+      ev.stopPropagation();
+      const path = JSON.parse(b.dataset.path);
+      const a = b.dataset.act;
+      if (a === 'up')   moveNode(path, -1);
+      if (a === 'down') moveNode(path, 1);
+      if (a === 'copy') copyNode(path);
+      if (a === 'cut')  cutNode(path);
+      if (a === 'del')  deleteNode(path);
+    };
+  });
+}
+
+function missingRequired(n, sch){
+  if (!sch) return [];
+  return (sch.fields||[]).filter(f => {
+    if (f.key === 'predicate') return !n.params[f.key] || !n.params[f.key].type;
+    if (!f.required) return false;
+    const v = n.params[f.key];
+    return v === undefined || v === null || v === '';
+  }).map(f => f.label || f.key);
 }
 
 function renderList(list, basePath){
-  return list.map((n, i) => {
+  return (list||[]).map((n, i) => {
     const path = [...basePath, i];
     const sch = blockSchema(n.type);
     const sel = selPath && JSON.stringify(selPath) === JSON.stringify(path);
+    const dis = !!(n.params && n.params._disabled);
+    const lab = (n.params && n.params._label) || '';
+    const miss = missingRequired(n, sch);
     const summary = renderSummary(n, sch);
+
+    if (n.type === 'divider') {
+      return `<div class="node divider ${sel?'selected':''}" data-path='${JSON.stringify(path)}'>
+        <div class="body"><span class="label">${escapeHtml((n.params&&n.params.text)||'—')}</span></div>
+        <div class="ctrl">
+          <button data-act="up" data-path='${JSON.stringify(path)}'>↑</button>
+          <button data-act="down" data-path='${JSON.stringify(path)}'>↓</button>
+          <button data-act="copy" data-path='${JSON.stringify(path)}'>copy</button>
+          <button data-act="del" data-path='${JSON.stringify(path)}' class="danger">✕</button>
+        </div>
+      </div>`;
+    }
+
     let slots = '';
     if (sch && sch.childSlots) {
       slots = sch.childSlots.map(s => `
         <div class="slot">
           <div class="slot-label">${s}</div>
-          ${renderList(n.children[s] || [], [...path, s]) ||
-            '<div class="empty">empty</div>'}
+          ${renderList(n.children[s], [...path, s]) || '<div class="empty-tree" style="padding:6px 0">empty — drop a block here</div>'}
         </div>`).join('');
     }
+
+    const cls = ['node'];
+    if (sel) cls.push('selected');
+    if (dis) cls.push('disabled');
+    if (miss.length) cls.push('invalid');
+
     return `
-      <div class="node ${sel?'selected':''}" data-path='${JSON.stringify(path)}'>
-        <span class="grip">⋮⋮</span>
-        <span class="type">${n.type}</span>
-        <span class="summary">${summary||''}</span>
-        <button onclick='moveNode(${JSON.stringify(path)},-1)'>↑</button>
-        <button onclick='moveNode(${JSON.stringify(path)},1)'>↓</button>
-        <button class="del" onclick='deleteNode(${JSON.stringify(path)})'>✕</button>
+      <div class="${cls.join(' ')}" data-path='${JSON.stringify(path)}'>
+        <span class="badge">${i+1}</span>
+        <div class="body">
+          <span class="label ${lab?'':'empty'}">${escapeHtml(lab || '— no label')}</span>
+          <div class="info">
+            <span class="type">${escapeHtml(n.type)}</span>
+            ${summary?`<span class="summary">${escapeHtml(summary)}</span>`:''}
+            ${miss.length?`<span class="miss">missing: ${escapeHtml(miss.join(', '))}</span>`:''}
+            ${dis?`<span class="type" style="color:var(--accent)">disabled</span>`:''}
+          </div>
+        </div>
+        <div class="ctrl">
+          <button data-act="up" data-path='${JSON.stringify(path)}'>↑</button>
+          <button data-act="down" data-path='${JSON.stringify(path)}'>↓</button>
+          <button data-act="copy" data-path='${JSON.stringify(path)}'>copy</button>
+          <button data-act="cut" data-path='${JSON.stringify(path)}'>cut</button>
+          <button data-act="del" data-path='${JSON.stringify(path)}' class="danger">✕</button>
+        </div>
       </div>
-      ${slots}
-    `;
+      ${slots}`;
   }).join('');
 }
 
@@ -249,76 +448,92 @@ function renderSummary(n, sch){
   if (!sch) return '?';
   const p = n.params || {};
   if (n.type === 'wait') return (p.ms||0) + 'ms';
-  if (n.type === 'repeat') return '× ' + (p.count||1);
+  if (n.type === 'repeat') return '× ' + (p.count||1) + (p.interval_ms?` (${p.interval_ms}ms gap)`:'');
   if (n.type === 'wol') return p.mac || '';
   if (n.type === 'wifi-hop') return p.ssid || '';
-  if (n.type === 'samsung-keys') return (p.keys||'').slice(0, 32);
+  if (n.type === 'samsung-key') return (p.ip?p.ip+' · ':'') + (p.key || '');
   if (n.type === 'if') return (p.predicate||{}).type || '';
+  if (n.type === 'divider') return '';
   return '';
 }
 
 // ---- Inspector ----
 function renderInspector(){
-  if (!selPath) { $('#inspector').innerHTML = '<div class="empty">Select a block.</div>'; return; }
+  if (!selPath) { $('#inspector').innerHTML = '<div class="empty-tree">Select a block.</div>'; return; }
   const node = getNode(selPath);
   const sch = blockSchema(node.type);
-  const html = (sch.fields||[]).map(f => fieldHtml(f, node.params[f.key], 'p_'+f.key)).join('');
-  $('#inspector').innerHTML = `
-    <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted);margin-bottom:8px">${node.type}</div>
-    ${html || '<div class="empty">No fields.</div>'}
-  `;
-  for (const f of sch.fields||[]) attachField(node, f, 'p_'+f.key);
+  const disabled = !!(node.params && node.params._disabled);
+  const head = `<div class="insp-head">
+      <span class="ty">${escapeHtml(node.type)}</span>
+      <label class="toggle"><input type="checkbox" id="p__disabled" ${disabled?'checked':''}/> disable</label>
+    </div>`;
+  // Always show label as a virtual field above the schema fields
+  let html = `<div class="field">
+    <label>Label <span style="color:var(--ink-3)">(your note)</span></label>
+    <input id="p__label" value="${escapeAttr((node.params&&node.params._label)||'')}" />
+  </div>`;
+  html += (sch?.fields||[]).map(f => fieldHtml(f, node.params[f.key], 'p_'+f.key, node)).join('');
+  $('#inspector').innerHTML = head + (html || '<div class="empty-tree">No fields.</div>');
+
+  attachLabelField(node);
+  attachDisableField(node);
+  for (const f of sch?.fields||[]) attachField(node, f, 'p_'+f.key);
 }
 
-function fieldHtml(f, val, id){
+function fieldHtml(f, val, id, node){
+  const miss = f.required && (val===undefined||val===null||val==='');
+  const cls = miss ? 'missing' : '';
+  const reqMark = f.required ? '<span class="req">required</span>' : '';
+  const labelHtml = `<label>${escapeHtml(f.label||f.key)} ${reqMark}</label>`;
   if (f.type === 'enum') {
-    const opts = (f.enum||'').split(',').map(o =>
-      `<option ${val===o?'selected':''}>${o}</option>`).join('');
-    return `<div class="field"><label>${f.label}</label><select id="${id}">${opts}</select></div>`;
+    const opts = (f.enum||'').split(',').map(o => `<option ${val===o?'selected':''}>${o}</option>`).join('');
+    return `<div class="field">${labelHtml}<select id="${id}" class="${cls}">${opts}</select></div>`;
   }
-  if (f.type === 'bool') {
-    return `<div class="field"><label><input type="checkbox" id="${id}" ${val?'checked':''}> ${f.label}</label></div>`;
-  }
-  if (f.type === 'stringList') {
-    return `<div class="field"><label>${f.label}</label>
-      <textarea id="${id}" placeholder="comma-separated">${val||''}</textarea></div>`;
-  }
-  if (f.type === 'int') {
-    return `<div class="field"><label>${f.label}</label>
-      <input id="${id}" type="number" value="${val??''}"></div>`;
-  }
-  if (f.type === 'mac') {
-    return `<div class="field"><label>${f.label}</label>
-      <input id="${id}" placeholder="AA:BB:CC:DD:EE:FF" value="${val||''}"></div>`;
-  }
+  if (f.type === 'bool')
+    return `<div class="field"><label><input type="checkbox" id="${id}" ${val?'checked':''}> ${escapeHtml(f.label)} ${reqMark}</label></div>`;
+  if (f.type === 'stringList')
+    return `<div class="field">${labelHtml}<textarea id="${id}" class="${cls}" placeholder="comma-separated">${escapeHtml(val||'')}</textarea></div>`;
+  if (f.type === 'int')
+    return `<div class="field">${labelHtml}<input id="${id}" class="${cls}" type="number" value="${val??''}" /></div>`;
+  if (f.type === 'mac')
+    return `<div class="field">${labelHtml}<input id="${id}" class="${cls}" placeholder="AA:BB:CC:DD:EE:FF" value="${escapeAttr(val||'')}" /></div>`;
   if (f.type === 'predicateRef') {
     const cur = val || { type:'', params:{} };
     const opts = schema.predicates.map(p => `<option value="${p.type}" ${cur.type===p.type?'selected':''}>${p.label}</option>`).join('');
     const sub = predicateSchema(cur.type);
     const subFields = sub ? (sub.fields||[]).map(sf => fieldHtml(sf, (cur.params||{})[sf.key], id+'_'+sf.key)).join('') : '';
-    return `<div class="field"><label>${f.label}</label>
-      <select id="${id}_type">${opts}</select>
-      <div style="margin-top:6px">${subFields}</div></div>`;
+    return `<div class="field">${labelHtml}<select id="${id}_type">${opts}</select><div style="margin-top:8px">${subFields}</div></div>`;
   }
-  return `<div class="field"><label>${f.label}</label><input id="${id}" value="${val||''}"></div>`;
+  return `<div class="field">${labelHtml}<input id="${id}" class="${cls}" value="${escapeAttr(val||'')}" /></div>`;
 }
 
+function attachLabelField(node){
+  const el = document.getElementById('p__label');
+  el.oninput = e => { node.params._label = e.target.value; markDirty(); renderTree(); };
+}
+function attachDisableField(node){
+  const el = document.getElementById('p__disabled');
+  el.onchange = e => {
+    if (e.target.checked) node.params._disabled = true;
+    else delete node.params._disabled;
+    markDirty(); renderTree();
+  };
+}
 function attachField(node, f, id){
-  const set = v => { node.params[f.key] = v; };
   if (f.type === 'predicateRef') {
     const sel = document.getElementById(id+'_type');
     sel.onchange = e => {
       const sub = predicateSchema(e.target.value);
       node.params[f.key] = { type: e.target.value, params: defaultParams(sub.fields||[]) };
-      renderInspector();
+      markDirty(); renderInspector(); renderTree();
     };
     const sub = predicateSchema((node.params[f.key]||{}).type);
     if (sub) for (const sf of sub.fields||[]) {
       const el = document.getElementById(id+'_'+sf.key);
       if (!el) continue;
       el.oninput = e => {
-        node.params[f.key].params[sf.key] = sf.type === 'int'
-          ? parseInt(e.target.value,10) : e.target.value;
+        node.params[f.key].params[sf.key] = sf.type === 'int' ? parseInt(e.target.value,10) : e.target.value;
+        markDirty();
       };
     }
     return;
@@ -327,10 +542,12 @@ function attachField(node, f, id){
   if (!el) return;
   el.oninput = e => {
     let v = e.target.value;
-    if (f.type === 'int')   v = parseInt(v,10);
-    if (f.type === 'bool')  v = e.target.checked;
-    set(v);
-    if (['type','ssid','count','mac','keys','ms'].includes(f.key)) renderTree();
+    if (f.type === 'int')  v = parseInt(v,10);
+    if (f.type === 'bool') v = e.target.checked;
+    node.params[f.key] = v;
+    el.classList.toggle('missing', f.required && (v===''||v===null||v===undefined||(f.type==='int'&&isNaN(v))));
+    markDirty();
+    if (['ssid','count','mac','key','interval_ms','ms','text'].includes(f.key)) renderTree();
   };
 }
 
@@ -338,36 +555,53 @@ function attachField(node, f, id){
 async function save(){
   if (!seq.name) seq.name = 'untitled';
   if (!allSeqs.includes(seq)) allSeqs.push(seq);
-  $('#status').textContent = 'saving …';
-  const r = await fetch('/api/sequences', {
-    method:'PUT', headers:{'content-type':'application/json'},
-    body: JSON.stringify(allSeqs),
-  });
-  if (!r.ok) { $('#status').textContent = 'save failed ' + r.status; return; }
-  const updated = await r.json();
-  if (!seq.id) {
-    const match = updated.find(s => s.name === seq.name && s.nodes.length === seq.nodes.length);
-    if (match) seq.id = match.id;
-  }
-  $('#status').textContent = 'saved';
-  if (seq.id && !location.search.includes(seq.id)) {
-    history.replaceState(null, '', '/edit?id=' + seq.id);
-  }
+  $('#btnSave').disabled = true;
+  setStatus('saving…', {spin:true});
+  try{
+    const r = await fetch('/api/sequences', {
+      method:'PUT', headers:{'content-type':'application/json'},
+      body: JSON.stringify(allSeqs),
+    });
+    if (!r.ok){ setStatus('save failed: '+r.status, {err:true}); return; }
+    const updated = await r.json();
+    if (!seq.id) {
+      const m = updated.find(s => s.name === seq.name && s.nodes.length === seq.nodes.length);
+      if (m) seq.id = m.id;
+    }
+    clearDirty();
+    setStatus('saved', {ok:true});
+    setTimeout(()=>setStatus(''), 1500);
+    if (seq.id && !location.search.includes(seq.id))
+      history.replaceState(null,'','/edit?id='+seq.id);
+  }catch(e){ setStatus('save failed: '+e, {err:true}); }
+  finally{ $('#btnSave').disabled = false; }
 }
 
 async function testRun(){
-  if (!seq.id) { await save(); }
-  $('#status').textContent = 'running …';
-  const r = await fetch('/api/run?id='+encodeURIComponent(seq.id),{method:'POST'});
-  $('#status').textContent = 'run ' + r.status + ': ' + await r.text();
-  poll();
+  if (dirty || !seq.id) await save();
+  if (!seq.id) return;
+  $('#btnTest').disabled = true;
+  setStatus('dispatching…', {spin:true});
+  try{
+    const r = await fetch('/api/run?id='+encodeURIComponent(seq.id),{method:'POST'});
+    if (!r.ok){ setStatus('run rejected: '+r.status, {err:true}); $('#btnTest').disabled=false; return; }
+    setStatus('running…', {spin:true});
+    await poll();
+  }catch(e){ setStatus('run failed: '+e, {err:true}); }
+  finally{ $('#btnTest').disabled = false; }
 }
 async function poll(){
-  for (let i = 0; i < 60; i++) {
+  for (let i=0;i<240;i++){
     await new Promise(r=>setTimeout(r,500));
-    const s = await fetch('/api/status').then(r=>r.json());
-    $('#status').textContent = s.running ? 'running …' : (s.lastError ? ('error: '+s.lastError) : 'done');
-    if (!s.running) break;
+    let s; try{ s = await fetch('/api/status').then(r=>r.json()); }catch{continue;}
+    if (s.running){ setStatus('running…', {spin:true}); continue; }
+    if (s.lastError){ setStatus('error: '+s.lastError, {err:true}); }
+    else { setStatus('done', {ok:true}); setTimeout(()=>setStatus(''),2400); }
+    return;
   }
+  setStatus('still running (poll timed out)');
 }
+
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
 </script>

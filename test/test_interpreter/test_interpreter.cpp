@@ -45,14 +45,7 @@ void test_unknown_block_fails() {
 }
 
 void test_repeat_runs_body_n_times() {
-    Interpreter interp(Registry::instance());
-    Sequence s;
-    Node rep; rep.type = "repeat"; rep.params["count"] = 3;
-    Node leaf; leaf.type = "wait";
-    rep.children["body"].push_back(leaf);
-    s.nodes.push_back(rep);
-
-    // hack: count via static? Easiest: replace block with a counting fake.
+    // Fresh registry with a counting block registered as "wait".
     Registry::reset();
     struct CountingBlock : public Block {
         BlockSchema sch{"wait","W","F",nullptr,0,nullptr,0};
@@ -64,6 +57,13 @@ void test_repeat_runs_body_n_times() {
     static CountingBlock cb;
     cb.calls = 0;
     Registry::instance().registerBlock(&cb);
+
+    Interpreter interp(Registry::instance());
+    Sequence s;
+    Node rep; rep.type = "repeat"; rep.params["count"] = 3;
+    Node leaf; leaf.type = "wait";
+    rep.children["body"].push_back(leaf);
+    s.nodes.push_back(rep);
 
     RunCtx ctx;
     auto r = interp.runSequence(s, ctx);

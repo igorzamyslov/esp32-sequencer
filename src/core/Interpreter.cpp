@@ -2,7 +2,21 @@
 #include "Registry.h"
 #include "Predicate.h"
 
+#ifdef ARDUINO
+#include <Arduino.h>
+#endif
+
 namespace seqb {
+
+namespace {
+void interpDelay(uint32_t ms) {
+#ifdef ARDUINO
+    if (ms) delay(ms);
+#else
+    (void)ms;
+#endif
+}
+}
 
 RunResult Interpreter::runSequence(const Sequence& s, RunCtx& ctx) {
     return runSlot(s.nodes, ctx);
@@ -17,6 +31,13 @@ RunResult Interpreter::runSlot(const std::vector<Node>& nodes, RunCtx& ctx) {
 }
 
 RunResult Interpreter::runNode(const Node& n, RunCtx& ctx) {
+    // Honor the editor-side _disabled flag — skip silently.
+    {
+        JsonVariantConst dis = n.params["_disabled"];
+        if (!dis.isNull() && dis.as<bool>()) return RunResult::ok();
+    }
+    // Editor-only marker: divider block has no effect at runtime.
+    if (n.type == "divider") return RunResult::ok();
     if (n.type == "if") {
         auto pp = n.params["predicate"];
         const char* ptype = pp["type"].as<const char*>();
@@ -31,11 +52,13 @@ RunResult Interpreter::runNode(const Node& n, RunCtx& ctx) {
     }
     if (n.type == "repeat") {
         int count = n.params["count"] | 1;
+        uint32_t intervalMs = n.params["interval_ms"] | 0;
         auto it = n.children.find("body");
         if (it == n.children.end()) return RunResult::ok();
         for (int i = 0; i < count; ++i) {
             auto r = runSlot(it->second, ctx);
             if (r.status == RunStatus::Failed) return r;
+            if (intervalMs && i + 1 < count) interpDelay(intervalMs);
         }
         return RunResult::ok();
     }

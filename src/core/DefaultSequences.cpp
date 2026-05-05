@@ -12,42 +12,60 @@ DefaultsResult buildDefaults() {
     wake.cooldownMs = 60000;
 
     {
-        // Hop to the network where the PC is reachable for WoL. Fill ssid/password
-        // (and optional static_ip/gateway) in the editor.
-        Node n = leaf("wifi-hop"); wake.nodes.push_back(n);
-    }
-    {
-        Node n = leaf("wol"); n.params["mac"] = ""; wake.nodes.push_back(n);
-    }
-    {
-        // Hop back to the idle network. Fill in the same SSID/password as in /settings.
-        Node n = leaf("wifi-hop"); wake.nodes.push_back(n);
-    }
-    {
-        Node n = leaf("wol"); n.params["mac"] = ""; wake.nodes.push_back(n);
-    }
-    {
-        Node n = leaf("samsung-keys");
-        n.params["ip"] = "";
-        n.params["keys"] = "KEY_SOURCE";
-        n.params["settle_ms"] = 900;
+        Node n = leaf("wifi-hop");
+        n.params["_label"] = "Hop to PC's network";
         wake.nodes.push_back(n);
+    }
+    {
+        Node n = leaf("wol");
+        n.params["_label"] = "Wake PC";
+        n.params["mac"] = "";
+        wake.nodes.push_back(n);
+    }
+    {
+        Node n = leaf("wifi-hop");
+        n.params["_label"] = "Hop back to idle network";
+        wake.nodes.push_back(n);
+    }
+    {
+        Node n = leaf("wol");
+        n.params["_label"] = "Wake TV";
+        n.params["mac"] = "";
+        wake.nodes.push_back(n);
+    }
+    {
+        Node n = leaf("divider");
+        n.params["text"] = "Switch to HDMI input";
+        wake.nodes.push_back(n);
+    }
+    {
+        Node n = leaf("samsung-key"); n.params["ip"] = ""; n.params["key"] = "KEY_SOURCE";
+        wake.nodes.push_back(n);
+    }
+    {
+        Node w = leaf("wait"); w.params["ms"] = 900;
+        wake.nodes.push_back(w);
     }
     {
         Node rep = leaf("repeat");
         rep.params["count"] = 6;
-        Node leftKey = leaf("samsung-keys");
-        leftKey.params["ip"] = "";
-        leftKey.params["keys"] = "KEY_LEFT";
-        leftKey.params["settle_ms"] = 350;
-        rep.children["body"].push_back(leftKey);
+        rep.params["interval_ms"] = 350;
+        rep.params["_label"] = "Mash LEFT to reach the leftmost source";
+        Node k = leaf("samsung-key"); k.params["ip"] = ""; k.params["key"] = "KEY_LEFT";
+        rep.children["body"].push_back(k);
         wake.nodes.push_back(rep);
     }
     {
-        Node n = leaf("samsung-keys");
-        n.params["ip"] = "";
-        n.params["keys"] = "KEY_RIGHT,KEY_RIGHT,KEY_RIGHT,KEY_ENTER";
-        n.params["settle_ms"] = 350;
+        Node rep = leaf("repeat");
+        rep.params["count"] = 3;
+        rep.params["interval_ms"] = 350;
+        rep.params["_label"] = "Step right N times to reach HDMIn";
+        Node k = leaf("samsung-key"); k.params["ip"] = ""; k.params["key"] = "KEY_RIGHT";
+        rep.children["body"].push_back(k);
+        wake.nodes.push_back(rep);
+    }
+    {
+        Node n = leaf("samsung-key"); n.params["ip"] = ""; n.params["key"] = "KEY_ENTER";
         wake.nodes.push_back(n);
     }
     r.sequences.push_back(std::move(wake));
