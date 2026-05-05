@@ -1,7 +1,9 @@
 #pragma once
+#include "ParamScope.h"
 #include "Schema.h"
 #include "Sequence.h"
 #include <ArduinoJson.h>
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -17,6 +19,10 @@ struct RunCtx {
     NetworkManager* net = nullptr;
     StatusLed* led = nullptr;
     std::map<std::string, std::string> scratch;
+
+    std::vector<ParamScope> scopeStack;  // back() = current frame
+    std::vector<std::string> callStack;  // sequenceIds in flight (cycle guard)
+    std::function<const Sequence*(const std::string&)> sequenceLookup;  // optional
 };
 
 enum class RunStatus { Ok, Failed };

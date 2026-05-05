@@ -171,6 +171,95 @@ void test_failure_aborts_sequence() {
     TEST_ASSERT_FALSE(ran2);
 }
 
+void test_param_substitution_in_block_params() {
+    Registry::reset();
+    struct CapturingBlock : public Block {
+        BlockSchema sch{"cap", "C", "F", nullptr, 0, nullptr, 0};
+        JsonDocument seen;
+        const BlockSchema& schema() const override { return sch; }
+        RunResult run(JsonVariantConst params,
+                      const std::map<std::string, std::vector<Node>>&,
+                      RunCtx&,
+                      Interpreter&) override {
+            seen.set(params);
+            return RunResult::ok();
+        }
+    };
+    static CapturingBlock cb;
+    Registry::instance().registerBlock(&cb);
+
+    Interpreter interp(Registry::instance());
+    Sequence s;
+    s.id = "x";
+    ParamDef p;
+    p.key = "host";
+    p.type = FieldType::String;
+    p.defaultValue.set("h.example");
+    s.params.push_back(std::move(p));
+    Node n;
+    n.type = "cap";
+    n.params["url"] = "http://${host}/";
+    s.nodes.push_back(n);
+
+    RunCtx ctx;
+    auto r = interp.runSequence(s, ctx);
+    TEST_ASSERT_EQUAL((int)RunStatus::Ok, (int)r.status);
+    TEST_ASSERT_EQUAL_STRING("http://h.example/", cb.seen["url"].as<const char*>());
+}
+
+void test_args_override_default() {
+    Registry::reset();
+    struct CapturingBlock : public Block {
+        BlockSchema sch{"cap", "C", "F", nullptr, 0, nullptr, 0};
+        JsonDocument seen;
+        const BlockSchema& schema() const override { return sch; }
+        RunResult run(JsonVariantConst params,
+                      const std::map<std::string, std::vector<Node>>&,
+                      RunCtx&,
+                      Interpreter&) override {
+            seen.set(params);
+            return RunResult::ok();
+        }
+    };
+    static CapturingBlock cb;
+    Registry::instance().registerBlock(&cb);
+
+    Sequence s;
+    ParamDef p;
+    p.key = "host";
+    p.type = FieldType::String;
+    p.defaultValue.set("default");
+    s.params.push_back(std::move(p));
+    Node n;
+    n.type = "cap";
+    n.params["v"] = "${host}";
+    s.nodes.push_back(n);
+
+    Interpreter interp(Registry::instance());
+    RunCtx ctx;
+    JsonDocument args;
+    args["host"] = "override";
+    auto r = interp.runSequence(s, ctx, args.as<JsonVariantConst>());
+    TEST_ASSERT_EQUAL((int)RunStatus::Ok, (int)r.status);
+    TEST_ASSERT_EQUAL_STRING("override", cb.seen["v"].as<const char*>());
+}
+
+void test_unknown_param_fails_run() {
+    Registry::reset();
+    static FakeBlock cap("cap", "C", "F");
+    Registry::instance().registerBlock(&cap);
+    Sequence s;
+    Node n;
+    n.type = "cap";
+    n.params["x"] = "${nope}";
+    s.nodes.push_back(n);
+    Interpreter interp(Registry::instance());
+    RunCtx ctx;
+    auto r = interp.runSequence(s, ctx);
+    TEST_ASSERT_EQUAL((int)RunStatus::Failed, (int)r.status);
+    TEST_ASSERT_TRUE(r.error.find("nope") != std::string::npos);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_runs_leaf_block);
@@ -179,5 +268,8 @@ int main(int, char**) {
     RUN_TEST(test_if_runs_then_when_true);
     RUN_TEST(test_if_runs_else_when_false);
     RUN_TEST(test_failure_aborts_sequence);
+    RUN_TEST(test_param_substitution_in_block_params);
+    RUN_TEST(test_args_override_default);
+    RUN_TEST(test_unknown_param_fails_run);
     return UNITY_END();
 }
