@@ -4,7 +4,7 @@
 
 namespace {
     const char* INDEX_HTML = R"HTML(
-<!doctype html><meta charset=utf-8><title>esp32-tv setup</title>
+<!doctype html><meta charset=utf-8><title>esp32-sequencer setup</title>
 <meta name=viewport content="width=device-width,initial-scale=1">
 <style>
 :root{
@@ -48,7 +48,7 @@ button:hover{background:#7faedb;border-color:#7faedb}
 </style>
 <div class=wrap>
 <header>
-<h1>esp32-tv setup</h1>
+<h1>esp32-sequencer setup</h1>
 <a href=/>back</a>
 </header>
 <p class=hint>Bootstrap only: credentials for the WiFi network where this device idles and serves the web UI. Any other networks the device hops to are configured as <code>wifi-hop</code> blocks in the sequence editor.</p>

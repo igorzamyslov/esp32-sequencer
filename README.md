@@ -1,4 +1,4 @@
-# esp32-tv
+# esp32-sequencer
 
 ESP32-C3 firmware: a generic *sequence builder* for waking PCs/TVs, switching
 HDMI inputs, etc. The default wake-everything routine turns on a gaming PC and
@@ -21,7 +21,7 @@ Samsung Tizen TV when a DualSense controller is detected over BLE.
 
 ## First-run setup
 1. Build & flash: `pio run -e esp32c3 -t upload`.
-2. After boot, ESP32 (config-empty) opens AP `esp32-tv-setup` (open).
+2. After boot, ESP32 (config-empty) opens AP `esp32-sequencer-setup` (open).
 3. Connect a phone/laptop to that AP; open `http://192.168.4.1/`.
 4. Fill in the **idle WiFi** SSID + password — this is the network where the
    ESP32 lives and serves the web UI. Submit; the device reboots and joins it.

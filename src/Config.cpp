@@ -2,6 +2,8 @@
 #include <Preferences.h>
 
 namespace {
+    // NVS namespace kept as-is to avoid wiping existing devices' saved creds
+    // when the project was renamed.
     constexpr const char* NS = "esp32tv";
     Preferences& prefs() {
         static Preferences p;

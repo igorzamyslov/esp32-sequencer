@@ -13,7 +13,7 @@ void TvController::configure(const String& ip, const String& token, TokenCallbac
 
 String TvController::buildPath() const {
     // name must be base64-encoded
-    String name = base64::encode("esp32-tv");
+    String name = base64::encode("esp32-sequencer");
     String path = "/api/v2/channels/samsung.remote.control?name=" + name;
     if (token_.length()) path += "&token=" + token_;
     return path;

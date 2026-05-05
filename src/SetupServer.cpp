@@ -4,7 +4,7 @@
 
 void SetupServer::begin() {
     WiFi.mode(WIFI_AP);
-    WiFi.softAP("esp32-tv-setup");
+    WiFi.softAP("esp32-sequencer-setup");
     Serial.printf("[setup] AP up at %s\n", WiFi.softAPIP().toString().c_str());
 
     server_.on("/", HTTP_GET, [this](AsyncWebServerRequest* r){ handleRoot(r); });
