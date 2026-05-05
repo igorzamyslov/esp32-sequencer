@@ -17,7 +17,8 @@ public:
     const BlockSchema& schema() const override { return SCH; }
     RunResult run(JsonVariantConst params,
                   const std::map<std::string, std::vector<Node>>&,
-                  RunCtx&, Interpreter&) override {
+                  RunCtx&,
+                  Interpreter&) override {
         const char* mac = params["mac"].as<const char*>();
         if (!mac || !mac[0]) return RunResult::failed("wol: missing mac");
         if (!Wol::sendBroadcast(mac)) return RunResult::failed("wol: send failed");
@@ -25,7 +26,12 @@ public:
     }
 };
 
-WolBlock& instance(){ static WolBlock i; return i; }
-struct _Reg { _Reg(){ Registry::instance().registerBlock(&instance()); } } _reg;
-
+WolBlock& instance() {
+    static WolBlock i;
+    return i;
 }
+struct _Reg {
+    _Reg() { Registry::instance().registerBlock(&instance()); }
+} _reg;
+
+}  // namespace

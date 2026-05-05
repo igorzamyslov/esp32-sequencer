@@ -14,11 +14,11 @@ struct Node {
 };
 
 struct Sequence {
-    std::string id;             // 8-char hex, server-assigned
+    std::string id;  // 8-char hex, server-assigned
     std::string name;
-    uint32_t    cooldownMs = 60000;
+    uint32_t cooldownMs = 60000;
     std::vector<Node> nodes;
-    bool broken = false;        // true if a child references an unknown block type
+    bool broken = false;  // true if a child references an unknown block type
     std::string brokenReason;
 };
 

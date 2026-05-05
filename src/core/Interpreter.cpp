@@ -16,7 +16,7 @@ void interpDelay(uint32_t ms) {
     (void)ms;
 #endif
 }
-}
+}  // namespace
 
 RunResult Interpreter::runSequence(const Sequence& s, RunCtx& ctx) {
     return runSlot(s.nodes, ctx);
@@ -67,4 +67,4 @@ RunResult Interpreter::runNode(const Node& n, RunCtx& ctx) {
     return b->run(n.params, n.children, ctx, *this);
 }
 
-}
+}  // namespace seqb

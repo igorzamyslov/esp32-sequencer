@@ -79,12 +79,14 @@ void StatusLed::tick(uint32_t now_ms) {
 #endif
 }
 
-bool StatusLed::currentlyOn() const { return last_written_; }
+bool StatusLed::currentlyOn() const {
+    return last_written_;
+}
 
 #ifdef ARDUINO
 void StatusLed::attachPin(int pin) {
     pin_ = pin;
     pinMode(pin_, OUTPUT);
-    digitalWrite(pin_, HIGH); // off (active LOW)
+    digitalWrite(pin_, HIGH);  // off (active LOW)
 }
 #endif

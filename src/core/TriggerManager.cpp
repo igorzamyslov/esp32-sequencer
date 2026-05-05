@@ -6,7 +6,8 @@ namespace seqb {
 TriggerManager::TriggerManager(Registry& r, FireCallback cb) : reg_(r), cb_(std::move(cb)) {}
 
 void TriggerManager::applyBindings(const std::vector<TriggerBinding>& bs) {
-    for (auto& kv : active_) kv.second->unbind(kv.first);
+    for (auto& kv : active_)
+        kv.second->unbind(kv.first);
     active_.clear();
     anyPauses_ = false;
     for (auto& b : bs) {
@@ -19,6 +20,8 @@ void TriggerManager::applyBindings(const std::vector<TriggerBinding>& bs) {
     }
 }
 
-bool TriggerManager::anyPausesBleScan() const { return anyPauses_; }
+bool TriggerManager::anyPausesBleScan() const {
+    return anyPauses_;
+}
 
 }  // namespace seqb

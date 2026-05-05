@@ -7,7 +7,8 @@ public:
     const PredicateSchema& schema() const override { return schema_; }
     bool test(JsonVariantConst, RunCtx&) override { return result; }
     bool result = true;
+
 private:
     PredicateSchema schema_;
 };
-}
+}  // namespace seqb

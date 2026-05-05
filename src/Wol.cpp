@@ -8,13 +8,13 @@
 #endif
 
 namespace {
-    int hexNibble(char c) {
-        if (c >= '0' && c <= '9') return c - '0';
-        c = (char)tolower((unsigned char)c);
-        if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
-        return -1;
-    }
+int hexNibble(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    c = (char)tolower((unsigned char)c);
+    if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+    return -1;
 }
+}  // namespace
 
 namespace Wol {
 
@@ -35,7 +35,8 @@ bool parseMac(const char* mac_str, uint8_t out[6]) {
 }
 
 void buildMagicPacket(const uint8_t mac[6], uint8_t out[102]) {
-    for (int i = 0; i < 6; i++) out[i] = 0xFF;
+    for (int i = 0; i < 6; i++)
+        out[i] = 0xFF;
     for (int rep = 0; rep < 16; rep++) {
         for (int i = 0; i < 6; i++) {
             out[6 + rep * 6 + i] = mac[i];
@@ -63,11 +64,10 @@ bool sendBroadcast(const char* mac_str) {
     IPAddress global(255, 255, 255, 255);
     IPAddress ip = WiFi.localIP();
     IPAddress mask = WiFi.subnetMask();
-    IPAddress subnet(
-        ip[0] | (uint8_t)~mask[0],
-        ip[1] | (uint8_t)~mask[1],
-        ip[2] | (uint8_t)~mask[2],
-        ip[3] | (uint8_t)~mask[3]);
+    IPAddress subnet(ip[0] | (uint8_t)~mask[0],
+                     ip[1] | (uint8_t)~mask[1],
+                     ip[2] | (uint8_t)~mask[2],
+                     ip[3] | (uint8_t)~mask[3]);
 
     bool any_ok = false;
     for (int rep = 0; rep < 5; rep++) {
@@ -81,4 +81,4 @@ bool sendBroadcast(const char* mac_str) {
 }
 #endif
 
-}
+}  // namespace Wol

@@ -6,7 +6,9 @@
 
 using namespace seqb;
 
-void setUp() { Registry::reset(); }
+void setUp() {
+    Registry::reset();
+}
 void tearDown() {}
 
 void test_register_and_resolve_block() {

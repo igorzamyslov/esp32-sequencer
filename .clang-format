@@ -1,0 +1,36 @@
+# Calibrated to the existing project style (4-space indent, brace-attach,
+# left pointer alignment, no enforced declaration alignment, 100 col limit).
+BasedOnStyle: LLVM
+Standard: c++17
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+
+PointerAlignment: Left
+DerivePointerAlignment: false
+ReferenceAlignment: Pointer
+
+BreakBeforeBraces: Attach
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortBlocksOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
+
+NamespaceIndentation: None
+AccessModifierOffset: -4
+IndentCaseLabels: true
+SpacesBeforeTrailingComments: 2
+
+# Don't reorder includes — Arduino-ESP32 occasionally has order-sensitive ones.
+SortIncludes: Never
+
+# Wrapping
+AlignAfterOpenBracket: Align
+BinPackArguments: false
+BinPackParameters: false
+
+# Comments
+ReflowComments: true

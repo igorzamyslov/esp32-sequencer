@@ -19,19 +19,22 @@ void SequenceStore::save() {
 std::string SequenceStore::newId() {
     char buf[9];
     static const char* h = "0123456789abcdef";
-    for (int i = 0; i < 8; ++i) buf[i] = h[std::rand() & 0xf];
+    for (int i = 0; i < 8; ++i)
+        buf[i] = h[std::rand() & 0xf];
     buf[8] = 0;
     return std::string(buf);
 }
 
 void SequenceStore::replaceAll(std::vector<Sequence> seqs) {
-    for (auto& s : seqs) if (s.id.empty()) s.id = newId();
+    for (auto& s : seqs)
+        if (s.id.empty()) s.id = newId();
     seqs_ = std::move(seqs);
 }
 
 const Sequence* SequenceStore::findById(const std::string& id) const {
-    for (auto& s : seqs_) if (s.id == id) return &s;
+    for (auto& s : seqs_)
+        if (s.id == id) return &s;
     return nullptr;
 }
 
-}
+}  // namespace seqb

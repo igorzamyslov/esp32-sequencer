@@ -19,13 +19,15 @@ void setUp() {
     Registry::instance().registerPredicate(pred_);
 }
 void tearDown() {
-    delete wait_; delete pred_;
+    delete wait_;
+    delete pred_;
 }
 
 void test_runs_leaf_block() {
     Interpreter interp(Registry::instance());
     Sequence s;
-    Node n; n.type = "wait";
+    Node n;
+    n.type = "wait";
     s.nodes.push_back(n);
     RunCtx ctx;
     auto r = interp.runSequence(s, ctx);
@@ -36,7 +38,8 @@ void test_runs_leaf_block() {
 void test_unknown_block_fails() {
     Interpreter interp(Registry::instance());
     Sequence s;
-    Node n; n.type = "nope";
+    Node n;
+    n.type = "nope";
     s.nodes.push_back(n);
     RunCtx ctx;
     auto r = interp.runSequence(s, ctx);
@@ -48,11 +51,16 @@ void test_repeat_runs_body_n_times() {
     // Fresh registry with a counting block registered as "wait".
     Registry::reset();
     struct CountingBlock : public Block {
-        BlockSchema sch{"wait","W","F",nullptr,0,nullptr,0};
+        BlockSchema sch{"wait", "W", "F", nullptr, 0, nullptr, 0};
         int calls;
         const BlockSchema& schema() const override { return sch; }
-        RunResult run(JsonVariantConst, const std::map<std::string, std::vector<Node>>&,
-                      RunCtx&, Interpreter&) override { calls++; return RunResult::ok(); }
+        RunResult run(JsonVariantConst,
+                      const std::map<std::string, std::vector<Node>>&,
+                      RunCtx&,
+                      Interpreter&) override {
+            calls++;
+            return RunResult::ok();
+        }
     };
     static CountingBlock cb;
     cb.calls = 0;
@@ -60,8 +68,11 @@ void test_repeat_runs_body_n_times() {
 
     Interpreter interp(Registry::instance());
     Sequence s;
-    Node rep; rep.type = "repeat"; rep.params["count"] = 3;
-    Node leaf; leaf.type = "wait";
+    Node rep;
+    rep.type = "repeat";
+    rep.params["count"] = 3;
+    Node leaf;
+    leaf.type = "wait";
     rep.children["body"].push_back(leaf);
     s.nodes.push_back(rep);
 
@@ -74,10 +85,12 @@ void test_repeat_runs_body_n_times() {
 void test_if_runs_then_when_true() {
     Interpreter interp(Registry::instance());
     Sequence s;
-    Node ifn; ifn.type = "if";
+    Node ifn;
+    ifn.type = "if";
     ifn.params["predicate"]["type"] = "on-wifi";
     ifn.params["predicate"]["params"]["x"] = 1;
-    Node t; t.type = "wait";
+    Node t;
+    t.type = "wait";
     ifn.children["then"].push_back(t);
     s.nodes.push_back(ifn);
 
@@ -92,10 +105,15 @@ void test_if_runs_then_when_true() {
 void test_if_runs_else_when_false() {
     Interpreter interp(Registry::instance());
     Sequence s;
-    Node ifn; ifn.type = "if";
+    Node ifn;
+    ifn.type = "if";
     ifn.params["predicate"]["type"] = "on-wifi";
-    Node t; t.type = "wait"; t.params["which"] = "then";
-    Node e; e.type = "wait"; e.params["which"] = "else";
+    Node t;
+    t.type = "wait";
+    t.params["which"] = "then";
+    Node e;
+    e.type = "wait";
+    e.params["which"] = "else";
     ifn.children["then"].push_back(t);
     ifn.children["else"].push_back(e);
     s.nodes.push_back(ifn);
@@ -111,28 +129,40 @@ void test_if_runs_else_when_false() {
 void test_failure_aborts_sequence() {
     Registry::reset();
     struct FailBlock : public Block {
-        BlockSchema sch{"fail","Fail","F",nullptr,0,nullptr,0};
+        BlockSchema sch{"fail", "Fail", "F", nullptr, 0, nullptr, 0};
         const BlockSchema& schema() const override { return sch; }
-        RunResult run(JsonVariantConst, const std::map<std::string, std::vector<Node>>&,
-                      RunCtx&, Interpreter&) override { return RunResult::failed("boom"); }
+        RunResult run(JsonVariantConst,
+                      const std::map<std::string, std::vector<Node>>&,
+                      RunCtx&,
+                      Interpreter&) override {
+            return RunResult::failed("boom");
+        }
     };
     struct OkBlock : public Block {
-        BlockSchema sch{"ok","Ok","F",nullptr,0,nullptr,0};
+        BlockSchema sch{"ok", "Ok", "F", nullptr, 0, nullptr, 0};
         bool* ran;
         const BlockSchema& schema() const override { return sch; }
-        RunResult run(JsonVariantConst, const std::map<std::string, std::vector<Node>>&,
-                      RunCtx&, Interpreter&) override { *ran = true; return RunResult::ok(); }
+        RunResult run(JsonVariantConst,
+                      const std::map<std::string, std::vector<Node>>&,
+                      RunCtx&,
+                      Interpreter&) override {
+            *ran = true;
+            return RunResult::ok();
+        }
     };
     static FailBlock fb;
-    static OkBlock  ob;
-    bool ran2 = false; ob.ran = &ran2;
+    static OkBlock ob;
+    bool ran2 = false;
+    ob.ran = &ran2;
     Registry::instance().registerBlock(&fb);
     Registry::instance().registerBlock(&ob);
 
     Interpreter interp(Registry::instance());
     Sequence s;
-    Node n1; n1.type = "fail";
-    Node n2; n2.type = "ok";
+    Node n1;
+    n1.type = "fail";
+    Node n2;
+    n2.type = "ok";
     s.nodes.push_back(n1);
     s.nodes.push_back(n2);
     RunCtx ctx;

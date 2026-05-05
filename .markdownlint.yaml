@@ -1,0 +1,16 @@
+# See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+default: true
+
+# Long lines are fine in prose & code references.
+MD013: false
+# Multiple consecutive blank lines aren't a problem.
+MD012: false
+# Allow inline HTML (we use it sparingly in docs).
+MD033: false
+# Don't require explicit lang on every fenced code block.
+MD040: false
+# Headers don't have to start at h1 (sub-docs link in).
+MD041: false
+# Allow duplicate headings under different parents.
+MD024:
+  siblings_only: true

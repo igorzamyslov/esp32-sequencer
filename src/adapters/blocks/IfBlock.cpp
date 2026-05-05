@@ -14,11 +14,20 @@ constexpr BlockSchema SCH = {"if", "If", "Flow", FIELDS, 1, SLOTS, 2};
 class IfBlock : public Block {
 public:
     const BlockSchema& schema() const override { return SCH; }
-    RunResult run(JsonVariantConst, const std::map<std::string, std::vector<Node>>&,
-                  RunCtx&, Interpreter&) override { return RunResult::ok(); }
+    RunResult run(JsonVariantConst,
+                  const std::map<std::string, std::vector<Node>>&,
+                  RunCtx&,
+                  Interpreter&) override {
+        return RunResult::ok();
+    }
 };
 
-IfBlock& instance(){ static IfBlock i; return i; }
-struct _Reg { _Reg(){ Registry::instance().registerBlock(&instance()); } } _reg;
-
+IfBlock& instance() {
+    static IfBlock i;
+    return i;
 }
+struct _Reg {
+    _Reg() { Registry::instance().registerBlock(&instance()); }
+} _reg;
+
+}  // namespace

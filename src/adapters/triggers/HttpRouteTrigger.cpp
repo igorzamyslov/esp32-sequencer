@@ -27,7 +27,7 @@ void registerHandler(const std::string& path,
                      const std::string& sequenceId,
                      Trigger::FireCallback cb) {
     if (!g_server) return;
-    g_server->on(path.c_str(), HTTP_POST, [sequenceId, cb](AsyncWebServerRequest* req){
+    g_server->on(path.c_str(), HTTP_POST, [sequenceId, cb](AsyncWebServerRequest* req) {
         cb(sequenceId);
         req->send(200, "text/plain", "queued");
     });
@@ -37,16 +37,23 @@ void registerHandler(const std::string& path,
 
 namespace seqb {
 
-void HttpRouteTrigger::setServer(AsyncWebServer* s) { g_server = s; }
-
-HttpRouteTrigger& HttpRouteTrigger::instance() {
-    static HttpRouteTrigger i; return i;
+void HttpRouteTrigger::setServer(AsyncWebServer* s) {
+    g_server = s;
 }
 
-const TriggerSchema& HttpRouteTrigger::schema() const { return SCH; }
+HttpRouteTrigger& HttpRouteTrigger::instance() {
+    static HttpRouteTrigger i;
+    return i;
+}
 
-void HttpRouteTrigger::bind(const std::string& id, JsonVariantConst params,
-                            const std::string& seq, FireCallback cb) {
+const TriggerSchema& HttpRouteTrigger::schema() const {
+    return SCH;
+}
+
+void HttpRouteTrigger::bind(const std::string& id,
+                            JsonVariantConst params,
+                            const std::string& seq,
+                            FireCallback cb) {
     const char* path = params["path"].as<const char*>();
     if (!path || !path[0]) return;
     g_active[id] = {std::string(path), seq, cb};
@@ -62,6 +69,10 @@ void HttpRouteTrigger::unbind(const std::string& id) {
     g_active.erase(it);
 }
 
-namespace { struct _Reg { _Reg(){ Registry::instance().registerTrigger(&HttpRouteTrigger::instance()); } } _reg; }
+namespace {
+struct _Reg {
+    _Reg() { Registry::instance().registerTrigger(&HttpRouteTrigger::instance()); }
+} _reg;
+}  // namespace
 
-}
+}  // namespace seqb

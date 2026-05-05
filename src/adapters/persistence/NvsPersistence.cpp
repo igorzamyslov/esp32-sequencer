@@ -21,4 +21,4 @@ void NvsPersistence::save(const std::string& key, const std::string& blob) {
     p.end();
 }
 
-}
+}  // namespace seqb

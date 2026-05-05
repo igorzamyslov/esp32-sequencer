@@ -11,6 +11,7 @@ public:
     SetupServer(Config& cfg, BleScanner& /*scanner_unused*/) : cfg_(cfg), server_(80) {}
     void begin();
     void loop();
+
 private:
     Config& cfg_;
     AsyncWebServer server_;

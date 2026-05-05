@@ -2,21 +2,21 @@
 #include <Preferences.h>
 
 namespace {
-    // NVS namespace kept as-is to avoid wiping existing devices' saved creds
-    // when the project was renamed.
-    constexpr const char* NS = "esp32tv";
-    Preferences& prefs() {
-        static Preferences p;
-        return p;
-    }
+// NVS namespace kept as-is to avoid wiping existing devices' saved creds
+// when the project was renamed.
+constexpr const char* NS = "esp32tv";
+Preferences& prefs() {
+    static Preferences p;
+    return p;
 }
+}  // namespace
 
 Config Config::load() {
     Config c;
     prefs().begin(NS, true);
-    c.idleSsid      = prefs().getString("idleSsid", "");
-    c.idlePass      = prefs().getString("idlePass", "");
-    c.tvToken       = prefs().getString("tvTok", "");
+    c.idleSsid = prefs().getString("idleSsid", "");
+    c.idlePass = prefs().getString("idlePass", "");
+    c.tvToken = prefs().getString("tvTok", "");
     c.setupFallback = prefs().getBool("sFb", false);
     prefs().end();
     return c;

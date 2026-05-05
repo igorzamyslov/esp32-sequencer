@@ -3,7 +3,7 @@
 #include <functional>
 
 struct BleHit {
-    String mac;     // lowercase "aa:bb:cc:dd:ee:ff"
+    String mac;  // lowercase "aa:bb:cc:dd:ee:ff"
     int rssi;
     String name;
 };
@@ -14,7 +14,7 @@ public:
 
     void begin();
     void onHit(HitCallback cb) { cb_ = cb; }
-    void start(uint32_t duration_ms = 0); // 0 = continuous
+    void start(uint32_t duration_ms = 0);  // 0 = continuous
     void stop();
 
     // Called by the NimBLE callback shim — public for that reason, not for users.

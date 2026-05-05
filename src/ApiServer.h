@@ -17,16 +17,17 @@ class ApiServer {
 public:
     ApiServer(AsyncWebServer& srv,
               SequenceStore& seqs,
-              TriggerStore&  trigs,
+              TriggerStore& trigs,
               TriggerManager& tm,
               ApiHooks hooks);
     void registerRoutes();
+
 private:
     AsyncWebServer& srv_;
-    SequenceStore&  seqs_;
-    TriggerStore&   trigs_;
+    SequenceStore& seqs_;
+    TriggerStore& trigs_;
     TriggerManager& tm_;
-    ApiHooks        hooks_;
+    ApiHooks hooks_;
 };
 
-}
+}  // namespace seqb

@@ -9,7 +9,8 @@ public:
     RunResult runSequence(const Sequence& s, RunCtx& ctx);
     RunResult runNode(const Node& n, RunCtx& ctx);
     RunResult runSlot(const std::vector<Node>& nodes, RunCtx& ctx);
+
 private:
     Registry& reg_;
 };
-}
+}  // namespace seqb

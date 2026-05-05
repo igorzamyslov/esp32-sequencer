@@ -8,8 +8,8 @@
 struct Config {
     String idleSsid;
     String idlePass;
-    String tvToken;        // runtime-managed Samsung Tizen pairing token
-    bool setupFallback = false; // SoftAP setup mode auto-starts after persistent wifi failure
+    String tvToken;              // runtime-managed Samsung Tizen pairing token
+    bool setupFallback = false;  // SoftAP setup mode auto-starts after persistent wifi failure
 
     static Config load();
     void save() const;
@@ -18,7 +18,5 @@ struct Config {
     static void requestSetupOnNextBoot();
     static bool consumeSetupRequest();
 
-    bool hasAll() const {
-        return idleSsid.length() && idlePass.length();
-    }
+    bool hasAll() const { return idleSsid.length() && idlePass.length(); }
 };

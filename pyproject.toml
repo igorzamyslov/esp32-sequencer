@@ -1,0 +1,34 @@
+[project]
+name = "esp32-sequencer-tools"
+version = "0.0.0"
+description = "Build & dev tooling for the esp32-sequencer firmware"
+requires-python = ">=3.11"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0",
+    "ruff>=0.7",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [".pio", ".cache"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "PL",   # pylint
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "PLR0913",  # too many arguments
+    "PLR2004",  # magic value comparisons
+    "E501",     # line length — formatter handles it
+]

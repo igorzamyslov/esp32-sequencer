@@ -31,11 +31,11 @@ BleScanner scanner;
 AsyncWebServer http(80);
 
 seqb::NvsPersistence persistence;
-seqb::SequenceStore* seqStore   = nullptr;
-seqb::TriggerStore*  trigStore  = nullptr;
-seqb::Interpreter*   interp     = nullptr;
-seqb::TriggerManager* trigMgr   = nullptr;
-seqb::ApiServer*     apiServer  = nullptr;
+seqb::SequenceStore* seqStore = nullptr;
+seqb::TriggerStore* trigStore = nullptr;
+seqb::Interpreter* interp = nullptr;
+seqb::TriggerManager* trigMgr = nullptr;
+seqb::ApiServer* apiServer = nullptr;
 
 SetupServer* setup_srv = nullptr;
 
@@ -43,7 +43,7 @@ bool in_runtime_ = false;
 bool wifi_ready_ = false;
 bool runtime_http_started_ = false;
 bool ble_started_ = false;
-int  wifi_failures_ = 0;
+int wifi_failures_ = 0;
 uint32_t next_wifi_retry_ms_ = 0;
 
 // One-deep queue protected by a flag. The pending id is non-volatile because
@@ -52,8 +52,8 @@ volatile bool sequence_pending_ = false;
 String pending_seq_id_;
 
 std::string lastError_;
-uint32_t    lastRunMs_ = 0;
-bool        running_   = false;
+uint32_t lastRunMs_ = 0;
+bool running_ = false;
 
 void enqueueRun(const std::string& id) {
     if (sequence_pending_) return;  // 1-deep queue
@@ -63,9 +63,9 @@ void enqueueRun(const std::string& id) {
 
 std::string statusJson() {
     JsonDocument d;
-    d["running"]    = running_;
-    d["lastRunMs"]  = lastRunMs_;
-    d["lastError"]  = lastError_;
+    d["running"] = running_;
+    d["lastRunMs"] = lastRunMs_;
+    d["lastError"] = lastError_;
     std::string s;
     serializeJson(d, s);
     return s;
@@ -82,8 +82,14 @@ void seedDefaultsIfEmpty() {
     if (!seqStore->all().empty() && !trigStore->all().empty()) return;
     Serial.println("[boot] seeding defaults");
     auto def = seqb::buildDefaults();
-    if (seqStore->all().empty())  { seqStore->replaceAll(def.sequences);   seqStore->save(); }
-    if (trigStore->all().empty()) { trigStore->replaceAll(def.triggers);   trigStore->save(); }
+    if (seqStore->all().empty()) {
+        seqStore->replaceAll(def.sequences);
+        seqStore->save();
+    }
+    if (trigStore->all().empty()) {
+        trigStore->replaceAll(def.triggers);
+        trigStore->save();
+    }
 }
 
 static void sendGz(AsyncWebServerRequest* req, const unsigned char* data, size_t len) {
@@ -96,26 +102,35 @@ void startRuntimeHttp() {
     if (runtime_http_started_) return;
     Serial.println("[runtime] registering routes");
 
-    http.on("/reset",   HTTP_POST, [](AsyncWebServerRequest* req){
+    http.on("/reset", HTTP_POST, [](AsyncWebServerRequest* req) {
         Config::clear();
         req->send(200, "text/plain", "cleared — rebooting");
-        delay(500); ESP.restart();
+        delay(500);
+        ESP.restart();
     });
-    http.on("/setup",   HTTP_POST, [](AsyncWebServerRequest* req){
+    http.on("/setup", HTTP_POST, [](AsyncWebServerRequest* req) {
         Config::requestSetupOnNextBoot();
         req->send(200, "text/plain", "entering setup mode — rebooting");
-        delay(500); ESP.restart();
+        delay(500);
+        ESP.restart();
     });
-    http.on("/",         HTTP_GET, [](AsyncWebServerRequest* req){ sendGz(req, LANDING_HTML_GZ,  LANDING_HTML_GZ_LEN); });
-    http.on("/edit",     HTTP_GET, [](AsyncWebServerRequest* req){ sendGz(req, EDITOR_HTML_GZ,   EDITOR_HTML_GZ_LEN); });
-    http.on("/triggers", HTTP_GET, [](AsyncWebServerRequest* req){ sendGz(req, TRIGGERS_HTML_GZ, TRIGGERS_HTML_GZ_LEN); });
-    http.on("/settings", HTTP_GET, [](AsyncWebServerRequest* req){
+    http.on("/", HTTP_GET, [](AsyncWebServerRequest* req) {
+        sendGz(req, LANDING_HTML_GZ, LANDING_HTML_GZ_LEN);
+    });
+    http.on("/edit", HTTP_GET, [](AsyncWebServerRequest* req) {
+        sendGz(req, EDITOR_HTML_GZ, EDITOR_HTML_GZ_LEN);
+    });
+    http.on("/triggers", HTTP_GET, [](AsyncWebServerRequest* req) {
+        sendGz(req, TRIGGERS_HTML_GZ, TRIGGERS_HTML_GZ_LEN);
+    });
+    http.on("/settings", HTTP_GET, [](AsyncWebServerRequest* req) {
         req->send(200, "text/html", ConfigForm::renderHtml(cfg, false));
     });
-    http.on("/save",    HTTP_POST, [](AsyncWebServerRequest* req){
+    http.on("/save", HTTP_POST, [](AsyncWebServerRequest* req) {
         ConfigForm::applySave(req, cfg);
         req->send(200, "text/plain", "saved — rebooting in 2s");
-        delay(2000); ESP.restart();
+        delay(2000);
+        ESP.restart();
     });
 
     // Wire trigger adapter dependencies BEFORE applying bindings.
@@ -141,7 +156,7 @@ void startBle() {
     }
     Serial.println("[runtime] starting BLE scanner");
     scanner.begin();
-    scanner.onHit([](const BleHit& h){
+    scanner.onHit([](const BleHit& h) {
         std::string mac = std::string(h.mac.c_str());
         seqb::BleMacTrigger::instance().onHit(mac, h.rssi);
     });
@@ -173,17 +188,17 @@ void tryConnectIdle() {
 void enterRuntimeMode() {
     Serial.println("[boot] entering runtime mode");
 
-    seqStore  = new seqb::SequenceStore(persistence);
+    seqStore = new seqb::SequenceStore(persistence);
     trigStore = new seqb::TriggerStore(persistence);
-    interp    = new seqb::Interpreter(seqb::Registry::instance());
-    trigMgr   = new seqb::TriggerManager(seqb::Registry::instance(),
-                                          [](const std::string& sid){ enqueueRun(sid); });
+    interp = new seqb::Interpreter(seqb::Registry::instance());
+    trigMgr = new seqb::TriggerManager(seqb::Registry::instance(),
+                                       [](const std::string& sid) { enqueueRun(sid); });
     seqStore->load();
     trigStore->load();
     seedDefaultsIfEmpty();
 
     static seqb::ApiHooks hooks{
-        [](const std::string& sid){ enqueueRun(sid); },
+        [](const std::string& sid) { enqueueRun(sid); },
         statusJson,
     };
     apiServer = new seqb::ApiServer(http, *seqStore, *trigStore, *trigMgr, hooks);
@@ -193,12 +208,15 @@ void enterRuntimeMode() {
 }
 
 void setup() {
-    Serial.begin(115200); delay(1500);
+    Serial.begin(115200);
+    delay(1500);
     Serial.println("[boot] hi");
     led.attachPin(LED_PIN);
     cfg = Config::load();
-    if (!cfg.hasAll()) enterSetupMode();
-    else               enterRuntimeMode();
+    if (!cfg.hasAll())
+        enterSetupMode();
+    else
+        enterRuntimeMode();
 }
 
 void loop() {
@@ -218,15 +236,20 @@ void loop() {
             pending_seq_id_ = "";
             std::string sid(sidArduino.c_str());
             auto* seq = seqStore->findById(sid);
-            if (!seq) { lastError_ = "unknown sequence: " + sid; }
-            else {
+            if (!seq) {
+                lastError_ = "unknown sequence: " + sid;
+            } else {
                 if (ble_started_ && trigMgr->anyPausesBleScan()) scanner.stop();
                 led.setState(LedState::Running);
-                running_ = true; lastError_ = "";
+                running_ = true;
+                lastError_ = "";
                 seqb::RunCtx ctx;
-                ctx.config = &cfg; ctx.net = &net; ctx.led = &led;
+                ctx.config = &cfg;
+                ctx.net = &net;
+                ctx.led = &led;
                 auto r = interp->runSequence(*seq, ctx);
-                running_ = false; lastRunMs_ = millis();
+                running_ = false;
+                lastRunMs_ = millis();
                 if (r.status == seqb::RunStatus::Failed) {
                     lastError_ = r.error;
                     led.setState(LedState::Error);
