@@ -2,6 +2,7 @@
 #include "Registry.h"
 #include "Predicate.h"
 #include "ResolveParams.h"
+#include <algorithm>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -91,6 +92,31 @@ RunResult Interpreter::runNode(const Node& n, RunCtx& ctx) {
             if (intervalMs && i + 1 < count) interpDelay(intervalMs);
         }
         return RunResult::ok();
+    }
+    if (n.type == "call-sequence") {
+        if (ctx.scopeStack.empty()) return RunResult::failed("internal: no scope");
+        if (!ctx.sequenceLookup) return RunResult::failed("call-sequence: no lookup");
+
+        // Resolve args against caller's current scope.
+        auto resolved = resolveParams(n.params.as<JsonVariantConst>(), ctx.scopeStack.back());
+        if (!resolved.ok) return RunResult::failed(resolved.error);
+        const char* sid = resolved.doc["sequenceId"].as<const char*>();
+        if (!sid || !*sid) return RunResult::failed("call-sequence: missing sequenceId");
+
+        // Cycle detection.
+        if (std::any_of(ctx.callStack.begin(), ctx.callStack.end(), [sid](const std::string& on) {
+                return on == sid;
+            }))
+            return RunResult::failed(std::string("cycle: ") + sid);
+
+        const Sequence* callee = ctx.sequenceLookup(sid);
+        if (!callee) return RunResult::failed(std::string("unknown sequence: ") + sid);
+        if (callee->broken)
+            return RunResult::failed(std::string("callee broken: ") + sid + " (" +
+                                     callee->brokenReason + ")");
+
+        JsonVariantConst args = resolved.doc["args"].as<JsonVariantConst>();
+        return runSequence(*callee, ctx, args);
     }
     auto* b = reg_.resolveBlock(n.type);
     if (!b) return RunResult::failed("unknown block: " + n.type);
