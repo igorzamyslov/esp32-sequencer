@@ -19,12 +19,10 @@ bool isParamObject(JsonVariantConst v, const char*& nameOut) {
 void appendStringified(std::string& out, JsonVariantConst v) {
     if (v.is<const char*>())
         out.append(v.as<const char*>());
-    else if (v.is<int>())
-        out.append(std::to_string(v.as<int>()));
     else if (v.is<bool>())
         out.append(v.as<bool>() ? "true" : "false");
-    else if (v.is<float>())
-        out.append(std::to_string(v.as<float>()));
+    else if (v.is<int>())
+        out.append(std::to_string(v.as<int>()));
     else {
         std::string j;
         serializeJson(v, j);

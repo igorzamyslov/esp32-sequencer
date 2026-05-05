@@ -109,6 +109,15 @@ void test_literal_passthrough() {
     TEST_ASSERT_EQUAL_STRING("plain", r.doc["y"].as<const char*>());
 }
 
+void test_empty_placeholder_name_fails_clearly() {
+    JsonDocument in;
+    in.set("${}");
+    auto r = resolveParams(in.as<JsonVariantConst>(), makeScope());
+    TEST_ASSERT_FALSE(r.ok);
+    // Should produce a non-empty error mentioning the empty name path.
+    TEST_ASSERT_TRUE(r.error.find("unknown param") != std::string::npos);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_string_placeholder_full);
@@ -120,5 +129,6 @@ int main(int, char**) {
     RUN_TEST(test_unknown_param_string);
     RUN_TEST(test_unknown_param_object);
     RUN_TEST(test_literal_passthrough);
+    RUN_TEST(test_empty_placeholder_name_fails_clearly);
     return UNITY_END();
 }
