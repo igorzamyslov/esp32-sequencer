@@ -3,94 +3,181 @@
 <title>triggers · esp32-tv</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-:root{ --ink:#111;--paper:#fafaf7;--muted:#666;--rule:#d8d6cf;--accent:#c8553d; }
-@media(prefers-color-scheme:dark){:root{--ink:#e9e7e0;--paper:#15140f;--muted:#9b988e;--rule:#33312b;--accent:#e87a64;}}
+:root{
+  --bg:#1B2B34; --bg-2:#23323D; --bg-3:#2D3D4A;
+  --fg:#D8DEE9; --fg-2:#A7ADBA; --fg-3:#65737E;
+  --rule:#3F4D58; --rule-2:#324049;
+  --accent:#6699CC; --accent-2:#62B3B2;
+  --warn:#F99157; --danger:#EC5F67; --ok:#99C794;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:dark;
+}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.45 system-ui,sans-serif}
-.wrap{max-width:760px;margin:32px auto;padding:0 20px}
-h1{font-weight:600;margin:0 0 16px}
-.row{border:1px solid var(--rule);border-radius:3px;padding:12px 16px;margin:8px 0;display:grid;grid-template-columns:1fr 1fr 1fr 80px 60px 60px;gap:8px;align-items:center}
-.row:first-child{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border:0;padding:0 16px;margin:8px 0 0}
-input,select{font:inherit;padding:6px 8px;background:transparent;border:1px solid var(--rule);border-radius:3px;color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
-button,a.btn{font:inherit;padding:6px 12px;border:1px solid var(--rule);background:transparent;color:var(--ink);border-radius:3px;cursor:pointer;text-decoration:none}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
-#status{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px;color:var(--muted);margin-right:auto;align-self:center}
-.params{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px;color:var(--muted)}
+html,body{margin:0;background:var(--bg);color:var(--fg);
+  font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding:32px 24px 80px}
+header{display:flex;justify-content:space-between;align-items:baseline;
+  padding-bottom:14px;border-bottom:1px solid var(--rule);margin-bottom:24px}
+header h1{font:600 22px/1.2 var(--sans);letter-spacing:-0.01em;margin:0}
+
+button,a.btn{font:13px/1 var(--sans);font-weight:500;padding:7px 12px;border-radius:6px;
+  background:var(--bg);border:1px solid var(--rule);color:var(--fg);text-decoration:none;cursor:pointer;
+  transition:background .12s,border-color .12s}
+button:hover,a.btn:hover{background:var(--bg-2);border-color:var(--fg-3)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+button.primary:hover{background:#7faedb;border-color:#7faedb}
+button.primary.dirty{background:var(--warn);border-color:var(--warn)}
+button.danger{border-color:transparent;color:var(--fg-3);padding:5px 8px}
+button.danger:hover{border-color:var(--danger);color:var(--danger);background:var(--bg-2)}
+
+.head,.row{display:grid;grid-template-columns:170px 1fr 1fr 100px 80px 40px;gap:10px;align-items:center;padding:10px 14px}
+.head{font:600 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.1em;color:var(--fg-3);
+  border-bottom:1px solid var(--rule);padding:8px 14px}
+.row{background:var(--bg);border:1px solid var(--rule);border-radius:6px;margin:6px 0}
+.row:hover{border-color:var(--fg-3)}
+.row select,.row input{
+  width:100%;padding:7px 9px;font:13px/1.3 var(--mono);
+  background:var(--bg-2);border:1px solid var(--rule);border-radius:5px;color:var(--fg);
+}
+.row select:focus,.row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.row .params{display:flex;flex-direction:column;gap:4px}
+.row label.tog{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--fg-2);justify-content:center}
+.row label.tog input{width:auto}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;align-items:center}
+#status{margin-right:auto;font:12px/1 var(--mono);color:var(--fg-2);display:flex;align-items:center;gap:8px}
+#status .spin{display:inline-block;width:11px;height:11px;border:1.5px solid var(--rule);
+  border-top-color:var(--fg);border-radius:50%;animation:spin .8s linear infinite}
+#status.err{color:var(--danger)} #status.ok{color:var(--ok)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{padding:32px;text-align:center;color:var(--fg-3);
+  border:1px dashed var(--rule);border-radius:6px}
+::selection{background:var(--accent);color:var(--bg)}
+
+@media (max-width:780px){
+  .head{display:none}
+  .row{grid-template-columns:1fr;gap:8px}
+}
 </style>
+
 <div class="wrap">
-  <a class="btn" href="/">← back</a>
-  <h1 style="margin-top:12px">Triggers</h1>
+  <header>
+    <h1>Triggers</h1>
+    <a class="btn" href="/">‹ back</a>
+  </header>
+  <div id="head" class="head" hidden>
+    <div>Type</div><div>Params</div><div>Sequence</div><div>State</div><div></div><div></div>
+  </div>
   <div id="rows"></div>
   <div class="actions">
     <span id="status"></span>
-    <button onclick="addRow()">Add trigger</button>
-    <button class="primary" onclick="save()">Save</button>
+    <button onclick="addRow()">+ add trigger</button>
+    <button id="save" class="primary" onclick="save()">Save</button>
   </div>
 </div>
-<script>
-let schema=null, seqs=[], trigs=[];
-const $ = s => document.querySelector(s);
 
+<script>
+const $ = s => document.querySelector(s);
+let schema=null, seqs=[], trigs=[], dirty=false;
+
+function setStatus(msg, opts){
+  const el=$('#status'); el.classList.remove('ok','err');
+  if (opts?.err) el.classList.add('err');
+  if (opts?.ok)  el.classList.add('ok');
+  el.innerHTML='';
+  if (opts?.spin){ const s=document.createElement('span'); s.className='spin'; el.appendChild(s); }
+  if (msg) el.appendChild(document.createTextNode(msg));
+}
+function markDirty(){ dirty=true; $('#save').classList.add('dirty'); }
+function clearDirty(){ dirty=false; $('#save').classList.remove('dirty'); }
+
+setStatus('loading…', {spin:true});
 (async function(){
-  schema = await fetch('/api/schema').then(r=>r.json());
-  seqs   = await fetch('/api/sequences').then(r=>r.json());
-  trigs  = await fetch('/api/triggers').then(r=>r.json());
+  try{
+    [schema, seqs, trigs] = await Promise.all([
+      fetch('/api/schema').then(r=>r.json()),
+      fetch('/api/sequences').then(r=>r.json()),
+      fetch('/api/triggers').then(r=>r.json()),
+    ]);
+  }catch(e){ setStatus('failed: '+e, {err:true}); return; }
+  setStatus('');
   render();
 })();
 
+window.addEventListener('beforeunload', e => { if (dirty){ e.preventDefault(); e.returnValue=''; }});
+window.addEventListener('keydown', e => {
+  if ((e.metaKey||e.ctrlKey) && e.key==='s'){ e.preventDefault(); save(); }
+});
+
 function defaultParams(fields){
-  const p={}; for(const f of fields||[]){ if(f.default!==undefined){
-    p[f.key]= f.type==='int'?parseInt(f.default,10):f.default;
-  }} return p;
+  const p={};
+  for (const f of fields||[]) if (f.default !== undefined){
+    p[f.key] = f.type==='int' ? parseInt(f.default,10) : f.default;
+  }
+  return p;
 }
-
 function addRow(){
-  const t0 = schema.triggers[0];
+  const t0=schema.triggers[0];
   trigs.push({id:'',type:t0.type,sequenceId:(seqs[0]||{}).id||'',params:defaultParams(t0.fields),enabled:true});
-  render();
+  markDirty(); render();
 }
-
+function changeType(i, type){
+  const sch=schema.triggers.find(x=>x.type===type);
+  trigs[i].type=type; trigs[i].params=defaultParams(sch.fields);
+  markDirty(); render();
+}
 function render(){
-  const head = `<div class="row"><div>Type</div><div>Params</div><div>Sequence</div><div>Enabled</div><div></div><div></div></div>`;
-  const rows = trigs.map((t,i) => {
-    const sch = schema.triggers.find(x=>x.type===t.type) || schema.triggers[0];
-    const typeOpts = schema.triggers.map(x=>`<option value="${x.type}" ${t.type===x.type?'selected':''}>${x.label}</option>`).join('');
-    const seqOpts  = seqs.map(s=>`<option value="${s.id}" ${t.sequenceId===s.id?'selected':''}>${s.name||s.id}</option>`).join('');
-    const paramFields = (sch.fields||[]).map(f =>
-      `<input style="margin:1px 0" placeholder="${f.label}" oninput="trigs[${i}].params['${f.key}']=this.${f.type==='int'?'valueAsNumber':'value'}" value="${(t.params||{})[f.key]??''}">`
+  $('#head').hidden = trigs.length===0;
+  $('#rows').innerHTML = trigs.length ? trigs.map((t,i) => {
+    const sch=schema.triggers.find(x=>x.type===t.type) || schema.triggers[0];
+    const typeOpts=schema.triggers.map(x=>`<option value="${esc(x.type)}" ${t.type===x.type?'selected':''}>${esc(x.label)}</option>`).join('');
+    const seqOpts=seqs.map(s=>`<option value="${esc(s.id)}" ${t.sequenceId===s.id?'selected':''}>${esc(s.name||s.id)}</option>`).join('');
+    const paramFields=(sch.fields||[]).map(f =>
+      `<input placeholder="${esc(f.label)}" data-i="${i}" data-k="${esc(f.key)}" data-t="${f.type}" value="${esc((t.params||{})[f.key]??'')}" />`
     ).join('');
     return `<div class="row">
-      <select onchange="changeType(${i}, this.value)">${typeOpts}</select>
+      <select data-typ="${i}">${typeOpts}</select>
       <div class="params">${paramFields}</div>
-      <select onchange="trigs[${i}].sequenceId=this.value">${seqOpts}</select>
-      <label><input type="checkbox" ${t.enabled?'checked':''} onchange="trigs[${i}].enabled=this.checked"> on</label>
-      <button onclick="run(${i})">Run</button>
-      <button onclick="trigs.splice(${i},1);render()">✕</button>
+      <select data-seq="${i}">${seqOpts}</select>
+      <label class="tog"><input type="checkbox" data-en="${i}" ${t.enabled?'checked':''}/> enabled</label>
+      <button data-run="${i}">▸ run</button>
+      <button class="danger" data-rm="${i}" title="remove">✕</button>
     </div>`;
-  }).join('');
-  $('#rows').innerHTML = head + (rows || '<div class="row" style="grid-template-columns:1fr"><div style="color:var(--muted)">No triggers — add one.</div></div>');
-}
+  }).join('') : '<div class="empty">No triggers. Click <strong>add trigger</strong>.</div>';
 
-function changeType(i, type){
-  const sch = schema.triggers.find(x=>x.type===type);
-  trigs[i].type = type;
-  trigs[i].params = defaultParams(sch.fields);
-  render();
+  document.querySelectorAll('[data-typ]').forEach(el => el.onchange = e => changeType(+el.dataset.typ, e.target.value));
+  document.querySelectorAll('[data-seq]').forEach(el => el.onchange = e => { trigs[+el.dataset.seq].sequenceId=e.target.value; markDirty(); });
+  document.querySelectorAll('[data-en]').forEach(el => el.onchange = e => { trigs[+el.dataset.en].enabled=e.target.checked; markDirty(); });
+  document.querySelectorAll('[data-rm]').forEach(el => el.onclick = () => { trigs.splice(+el.dataset.rm,1); markDirty(); render(); });
+  document.querySelectorAll('[data-run]').forEach(el => el.onclick = () => run(+el.dataset.run));
+  document.querySelectorAll('input[data-i]').forEach(el => el.oninput = e => {
+    const v = el.dataset.t==='int' ? parseInt(e.target.value,10) : e.target.value;
+    trigs[+el.dataset.i].params[el.dataset.k] = v;
+    markDirty();
+  });
 }
 
 async function run(i){
-  const t=trigs[i]; if(!t.sequenceId) return;
-  $('#status').textContent='running '+t.sequenceId+' …';
-  const r = await fetch('/api/run?id='+encodeURIComponent(t.sequenceId),{method:'POST'});
-  $('#status').textContent='run '+r.status+': '+await r.text();
+  const t=trigs[i]; if (!t.sequenceId) return;
+  setStatus('running '+t.sequenceId+'…',{spin:true});
+  try{
+    const r=await fetch('/api/run?id='+encodeURIComponent(t.sequenceId),{method:'POST'});
+    setStatus('run → '+r.status+' '+await r.text(), {ok:r.ok, err:!r.ok});
+  }catch(e){ setStatus('failed: '+e,{err:true}); }
 }
-
 async function save(){
-  $('#status').textContent='saving …';
-  const r = await fetch('/api/triggers',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(trigs)});
-  trigs = await r.json();
-  $('#status').textContent='saved';
-  render();
+  $('#save').disabled=true;
+  setStatus('saving…',{spin:true});
+  try{
+    const r=await fetch('/api/triggers',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(trigs)});
+    if (!r.ok){ setStatus('save failed: '+r.status,{err:true}); return; }
+    trigs=await r.json();
+    clearDirty();
+    setStatus('saved',{ok:true});
+    setTimeout(()=>setStatus(''),1500);
+    render();
+  }catch(e){ setStatus('save failed: '+e,{err:true}); }
+  finally{ $('#save').disabled=false; }
 }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 </script>

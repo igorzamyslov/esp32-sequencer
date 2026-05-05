@@ -3,141 +3,244 @@
 <title>edit · esp32-tv</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
+/* Oceanic Next */
 :root{
-  --paper:#f3eddc; --hi:#ebe2c8; --ink:#1f1c14; --ink-2:#5a544a; --ink-3:#8b8579;
-  --rule:#c9c1ad; --rule-2:#dcd5c3; --accent:#7a1f17; --warn:#a4540a; --ok:#446644;
-  --serif:"Iowan Old Style","Hoefler Text",Garamond,"Apple Garamond","Times New Roman",Georgia,serif;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-}
-@media (prefers-color-scheme:dark){
-  :root{ --paper:#0a0a08; --hi:#1a1308; --ink:#f9c069; --ink-2:#b88450; --ink-3:#6e5638;
-         --rule:#3a2c1a; --rule-2:#251c10; --accent:#ff7a5c; --warn:#e09a3a; --ok:#9bc78e; }
+  --bg:#1B2B34;
+  --bg-2:#23323D;
+  --bg-3:#2D3D4A;
+  --fg:#D8DEE9;
+  --fg-2:#A7ADBA;
+  --fg-3:#65737E;
+  --rule:#3F4D58;
+  --rule-2:#324049;
+  --accent:#6699CC;     /* blue */
+  --accent-2:#62B3B2;   /* cyan */
+  --warn:#F99157;       /* orange */
+  --danger:#EC5F67;     /* red */
+  --ok:#99C794;         /* green */
+  --yellow:#FAC863;
+  --purple:#C594C5;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--paper);color:var(--ink);font:13.5px/1.5 var(--mono);-webkit-font-smoothing:antialiased}
+html,body{margin:0;background:var(--bg);color:var(--fg);
+  font:14px/1.45 var(--sans);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+button,input,select,textarea{font:inherit;color:inherit}
 
-header{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
-  padding:10px 18px;border-bottom:1px solid var(--ink);background:var(--paper);position:sticky;top:0;z-index:10}
-header .home{font:italic 18px/1 var(--serif);color:var(--ink);text-decoration:none;border:none;padding:0 2px}
-header .home:hover{color:var(--accent)}
-header .meta{display:flex;gap:14px;align-items:baseline;min-width:0}
-header .meta input{font:400 22px/1.1 var(--serif);letter-spacing:-0.005em;border:0;background:transparent;color:var(--ink);min-width:280px;padding:2px 0;border-bottom:1px solid transparent}
-header .meta input:focus{outline:none;border-bottom-color:var(--rule)}
-header .cd{display:flex;align-items:baseline;gap:6px;font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.16em;white-space:nowrap}
-header .cd input{width:74px;font:13px/1 var(--mono);text-align:right;border:0;border-bottom:1px solid var(--rule);background:transparent;color:var(--ink);padding:2px 4px}
-header .cd input:focus{outline:none;border-bottom-color:var(--ink)}
-header .actions{display:flex;gap:6px;align-items:center}
+/* --- Header --- */
+header{
+  display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;
+  padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--rule);
+  position:sticky;top:0;z-index:10;
+}
+header .home{
+  width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--rule);border-radius:6px;color:var(--fg);text-decoration:none;
+  font-size:18px;line-height:1;background:var(--bg);
+}
+header .home:hover{background:var(--bg-2);border-color:var(--fg-3)}
+header .meta{display:flex;align-items:center;gap:18px;min-width:0}
+header .meta input#seqName{
+  font:600 19px/1.2 var(--sans);
+  letter-spacing:-0.01em;
+  border:0;background:transparent;color:var(--fg);
+  padding:4px 6px;border-radius:4px;
+  min-width:280px;
+}
+header .meta input#seqName:focus{outline:1px solid var(--rule);background:var(--bg-2)}
+header .cd{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg-2);white-space:nowrap}
+header .cd input{
+  width:88px;font:13px/1 var(--mono);text-align:right;
+  border:1px solid var(--rule);border-radius:4px;background:var(--bg);padding:5px 7px;
+}
+header .cd input:focus{outline:none;border-color:var(--fg-2)}
+header .actions{display:flex;gap:8px;align-items:center}
 
-button,a.btn{font:12px/1 var(--mono);letter-spacing:.04em;padding:7px 11px;background:transparent;
-  border:1px solid var(--rule);color:var(--ink);text-decoration:none;cursor:pointer;text-transform:lowercase;
-  transition:border-color .12s,background .12s,color .12s}
-button:hover,a.btn:hover{border-color:var(--ink);background:var(--hi)}
-button.primary{border-color:var(--ink)}
-button.primary.dirty{border-color:var(--accent);color:var(--accent)}
-button.primary.dirty::before{content:"● "}
-button:disabled{opacity:.45;cursor:wait}
-.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ink-3);margin:0 6px 0 2px}
-.dot.dirty{background:var(--accent)}
-.dot.clean{background:var(--ok)}
+/* --- Buttons --- */
+button,a.btn{
+  font:13px/1 var(--sans);font-weight:500;
+  padding:7px 12px;border-radius:6px;
+  background:var(--bg);border:1px solid var(--rule);color:var(--fg);
+  text-decoration:none;cursor:pointer;
+  transition:background .12s,border-color .12s,color .12s;
+}
+button:hover,a.btn:hover{background:var(--bg-2);border-color:var(--fg-3)}
+button:active{background:var(--bg-3)}
+button.primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600}
+button.primary:hover{background:#7faedb;border-color:#7faedb}
+button.primary.dirty{background:var(--warn);border-color:var(--warn);color:var(--bg)}
+button.primary.dirty:hover{background:#ffac76;border-color:#ffac76}
+button.primary.dirty::before{content:"● ";font-size:10px}
+button:disabled{opacity:.5;cursor:wait}
+.kbd{font:11px/1 var(--mono);padding:2px 5px;border:1px solid currentColor;opacity:.55;border-radius:3px;margin-left:6px}
 
-main{display:grid;grid-template-columns:230px 1fr 340px;height:calc(100vh - 53px)}
-@media (max-width:980px){main{grid-template-columns:1fr;height:auto}}
-.col{overflow-y:auto;padding:18px 20px;border-right:1px solid var(--rule)}
+/* --- Layout --- */
+main{display:grid;grid-template-columns:240px 1fr 360px;height:calc(100vh - 53px)}
+@media (max-width:1000px){main{grid-template-columns:1fr;height:auto}}
+.col{overflow-y:auto;padding:18px 20px;border-right:1px solid var(--rule);background:var(--bg)}
+.col:nth-child(2){background:var(--bg-2)}
 .col:last-child{border-right:0}
-.col h3{font:11px/1 var(--mono);font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.18em;
-  margin:0 0 12px;display:flex;align-items:center;gap:8px}
-.col h3::after{content:"";flex:1;border-top:1px solid var(--rule)}
+.col h3{
+  font:600 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.1em;
+  color:var(--fg-3);margin:0 0 14px;
+}
 
 /* --- Palette --- */
-.cat{margin-bottom:16px}
-.cat .lab{font:10.5px/1.2 var(--mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.18em;margin:0 0 4px}
-.palette button{display:block;width:100%;text-align:left;margin:2px 0;padding:6px 8px;font-size:12px}
-.clip{margin-top:14px;padding:10px;border:1px dashed var(--rule);font-size:11px;color:var(--ink-2)}
-.clip strong{display:block;font:italic 14px/1.2 var(--serif);color:var(--ink);margin-bottom:4px}
-.clip .clip-actions{display:flex;gap:6px;margin-top:8px}
+.cat{margin-bottom:18px}
+.cat .lab{
+  font:600 10.5px/1.2 var(--sans);text-transform:uppercase;letter-spacing:.12em;
+  color:var(--fg-3);margin:0 0 6px;
+}
+.palette button{
+  display:block;width:100%;text-align:left;margin:3px 0;
+  padding:7px 10px;font-size:13px;font-weight:500;
+}
+.clip{
+  margin-top:18px;padding:12px;border:1px solid var(--rule);border-radius:6px;
+  background:var(--bg-2);font-size:12px;
+}
+.clip .ttl{
+  font:600 10.5px/1 var(--sans);text-transform:uppercase;letter-spacing:.12em;
+  color:var(--fg-3);margin-bottom:6px;
+}
+.clip .desc{font-weight:600;color:var(--fg);margin-bottom:2px}
+.clip .ty{font:11px/1.2 var(--mono);color:var(--fg-2)}
+.clip .clip-actions{display:flex;gap:6px;margin-top:10px}
 
-/* --- Sequence tree --- */
-.node{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;
-  padding:9px 11px;margin:5px 0;background:var(--paper);
-  border:1px solid var(--rule-2);border-left:3px solid var(--rule);
-  cursor:pointer;transition:border-color .1s,background .1s}
-.node:hover{border-left-color:var(--ink-3);background:var(--hi)}
-.node.selected{border-color:var(--ink);border-left-color:var(--accent);background:var(--hi)}
-.node.disabled{opacity:.45}
-.node.disabled .label{text-decoration:line-through}
-.node.invalid{border-left-color:var(--warn)}
-.node .badge{font:italic 14px/1 var(--serif);color:var(--ink-3);min-width:22px}
-.node .body{min-width:0;display:flex;flex-direction:column}
-.node .label{font:italic 15px/1.25 var(--serif);color:var(--ink);font-feature-settings:"onum"}
-.node .label.empty{font-style:normal;color:var(--ink-3);font:11.5px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.12em}
-.node .info{font:11.5px/1.35 var(--mono);color:var(--ink-2);margin-top:2px;display:flex;flex-wrap:wrap;gap:0 10px}
-.node .info .type{color:var(--ink-3);text-transform:uppercase;letter-spacing:.12em;font-size:10.5px}
-.node .info .summary{}
+/* --- Tree --- */
+.node{
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;
+  padding:10px 12px;margin:5px 0;
+  background:var(--bg);border:1px solid var(--rule);border-radius:6px;
+  cursor:pointer;transition:border-color .1s,background .1s,box-shadow .1s,opacity .1s;
+}
+.node[draggable]{cursor:grab}
+.node[draggable]:active{cursor:grabbing}
+.node.dragging{opacity:.4}
+.node.drop-above{box-shadow:0 -2px 0 0 var(--accent)}
+.node.drop-below{box-shadow:0 2px 0 0 var(--accent)}
+.node:hover{border-color:var(--fg-3);background:var(--bg-3)}
+.node.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:var(--bg-3)}
+.node.disabled{opacity:.5}
+.node.disabled .label{text-decoration:line-through;text-decoration-color:var(--fg-3)}
+.node.invalid{border-color:var(--warn)}
+.node.invalid.selected{box-shadow:0 0 0 1px var(--warn) inset;border-color:var(--warn)}
+
+.node .badge{
+  width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;
+  font:11px/1 var(--mono);color:var(--fg-2);
+  border:1px solid var(--rule);border-radius:50%;
+}
+.node .body{min-width:0;display:flex;flex-direction:column;gap:3px}
+.node .row1{display:flex;align-items:center;gap:8px;min-width:0}
+.node .label{font:600 14px/1.3 var(--sans);color:var(--fg);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node .label.empty{font-weight:400;color:var(--fg-3);font-style:normal}
+.node .pill{
+  font:11px/1 var(--mono);color:var(--accent-2);
+  padding:3px 6px;border:1px solid var(--rule);border-radius:3px;
+  white-space:nowrap;flex-shrink:0;background:var(--bg-2);
+}
+.node .info{font:12px/1.3 var(--mono);color:var(--fg-2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .node .info .miss{color:var(--warn);font-weight:600}
 .node .info .miss::before{content:"⚠ "}
+.node .info .off{color:var(--danger);font-weight:600;margin-left:8px}
 .node .ctrl{display:flex;gap:2px;opacity:0;transition:opacity .1s}
 .node:hover .ctrl,.node.selected .ctrl{opacity:1}
-.node .ctrl button{padding:4px 7px;font-size:11px;border-color:transparent;background:transparent;color:var(--ink-2)}
-.node .ctrl button:hover{border-color:var(--rule);color:var(--ink);background:var(--paper)}
-.node .ctrl button.danger:hover{border-color:var(--accent);color:var(--accent)}
+.node .ctrl button{
+  padding:5px 8px;font-size:12px;border-color:transparent;background:transparent;color:var(--fg-2);
+}
+.node .ctrl button:hover{border-color:var(--rule);color:var(--fg);background:var(--bg-2)}
+.node .ctrl button.danger:hover{border-color:var(--danger);color:var(--danger);background:var(--bg-2)}
 
-.node.divider{border:0;border-top:1px solid var(--rule);background:transparent;
-  border-left:0;padding:14px 0 6px;margin:14px 0 6px;
-  display:flex;align-items:baseline;gap:10px}
+.node.divider{
+  border:0;border-top:1px solid var(--rule);background:transparent;border-radius:0;
+  padding:14px 0 4px;margin:14px 0 4px;
+  display:flex;align-items:baseline;gap:10px;
+}
 .node.divider .badge{display:none}
-.node.divider .body{flex:1;flex-direction:row;align-items:baseline;gap:10px}
-.node.divider .label{font:italic 13px/1 var(--serif);color:var(--ink-2);font-size:14px}
-.node.divider::after{content:"";flex:1;border-bottom:1px dotted var(--rule);margin-left:8px;align-self:center}
-.node.divider.selected{background:var(--hi);padding:14px 11px 8px}
+.node.divider .body{flex:1;flex-direction:row;gap:10px;align-items:baseline}
+.node.divider .label{font:600 12px/1 var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--fg-2)}
+.node.divider::after{content:"";flex:1;border-bottom:1px dashed var(--rule);align-self:center;margin-left:6px}
+.node.divider.selected{background:var(--bg-2);padding:14px 12px 8px;box-shadow:none;border:1px solid var(--accent);border-radius:6px}
 
 .slot{margin-left:14px;padding-left:14px;border-left:1px dashed var(--rule)}
-.slot-label{font:10.5px/1.2 var(--mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.18em;margin:8px 0 2px}
-.empty-tree{padding:18px 0;color:var(--ink-3);font-style:italic;font-family:var(--serif)}
+.slot-label{
+  font:600 10.5px/1.2 var(--sans);text-transform:uppercase;letter-spacing:.12em;
+  color:var(--fg-3);margin:8px 0 4px;
+}
+.empty-tree{padding:20px 12px;color:var(--fg-3);font-size:13px;text-align:center;
+  border:1px dashed var(--rule);border-radius:6px;background:var(--bg)}
 
 /* --- Inspector --- */
-.field{margin:10px 0}
-.field label{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-2);margin-bottom:3px;
-  text-transform:uppercase;letter-spacing:.1em;align-items:baseline}
-.field label .req{color:var(--accent);font-size:10px;letter-spacing:.04em;text-transform:lowercase;font-style:italic;font-family:var(--serif)}
-.field input,.field select,.field textarea{
-  width:100%;font:13px/1.4 var(--mono);padding:7px 9px;background:var(--paper);
-  border:1px solid var(--rule);color:var(--ink)}
-.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--ink)}
-.field input.missing,.field select.missing,.field textarea.missing{border-color:var(--warn);background:var(--hi)}
-.field textarea{min-height:64px;resize:vertical}
-.field .hint{font-size:11px;color:var(--ink-3);margin-top:3px;font-style:italic;font-family:var(--serif)}
-.insp-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--rule-2)}
-.insp-head .ty{font:10.5px/1 var(--mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.18em}
-.insp-head .toggle{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--ink-2)}
-.insp-head input[type=checkbox]{width:auto;margin:0}
+.insp-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--rule);
+}
+.insp-head .ty{font:11px/1 var(--mono);color:var(--fg-2);
+  padding:4px 7px;border:1px solid var(--rule);border-radius:3px}
+.insp-head .toggle{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--fg-2)}
+.insp-head input[type=checkbox]{width:auto;margin:0;cursor:pointer}
 
-/* --- Status console --- */
-#status{display:flex;align-items:center;gap:8px;font:11.5px/1 var(--mono);color:var(--ink-2);max-width:340px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-#status .spin{display:inline-block;width:10px;height:10px;border:1.5px solid var(--ink-3);border-top-color:var(--ink);border-radius:50%;animation:spin .9s linear infinite}
-#status.err{color:var(--accent)}
+.field{margin:14px 0}
+.field label{display:flex;justify-content:space-between;align-items:baseline;
+  font:600 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--fg-2);
+  margin-bottom:5px}
+.field label .req{color:var(--danger);font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}
+.field input,.field select,.field textarea{
+  width:100%;padding:8px 10px;
+  font:13px/1.4 var(--mono);
+  background:var(--bg);border:1px solid var(--rule);border-radius:5px;color:var(--fg);
+  transition:border-color .1s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;
+}
+.field input.missing,.field select.missing,.field textarea.missing{
+  border-color:var(--warn);
+}
+.field textarea{min-height:64px;resize:vertical;font-family:var(--mono)}
+.field .hint{font-size:12px;color:var(--fg-3);margin-top:4px}
+.field-label-text input{font-family:var(--sans);font-weight:500}
+
+/* --- Status --- */
+#status{display:flex;align-items:center;gap:8px;font:12px/1 var(--sans);
+  color:var(--fg-2);max-width:320px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#status .spin{display:inline-block;width:11px;height:11px;border:1.5px solid var(--rule);
+  border-top-color:var(--fg);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+#status.err{color:var(--danger)}
 #status.ok{color:var(--ok)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* misc */
-.kbd{font:10.5px/1 var(--mono);padding:2px 5px;border:1px solid var(--rule);color:var(--ink-3);margin-left:6px}
+/* --- Misc --- */
+::selection{background:var(--accent);color:var(--bg)}
+input[type=number]{appearance:textfield;-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 </style>
 
 <header>
   <a class="home" href="/" title="back">‹</a>
   <div class="meta">
-    <input id="seqName" placeholder="Sequence name" />
+    <input id="seqName" placeholder="Untitled sequence" />
     <span class="cd">cooldown <input id="cooldown" type="number" min="0" step="1000" />ms</span>
   </div>
   <div class="actions">
     <span id="status"></span>
-    <button id="btnTest" onclick="testRun()">test run</button>
-    <button id="btnSave" class="primary" onclick="save()">save<span class="kbd">⌘S</span></button>
+    <button id="btnTest" onclick="testRun()">Test run</button>
+    <button id="btnSave" class="primary" onclick="save()">Save<span class="kbd">⌘S</span></button>
   </div>
 </header>
 
 <main>
   <div class="col palette">
-    <h3>Palette</h3>
+    <h3>Add block</h3>
     <div id="palette"></div>
     <div id="clip" class="clip" hidden></div>
   </div>
@@ -147,7 +250,7 @@ main{display:grid;grid-template-columns:230px 1fr 340px;height:calc(100vh - 53px
   </div>
   <div class="col">
     <h3>Inspector</h3>
-    <div id="inspector"><div class="empty-tree">Select a block.</div></div>
+    <div id="inspector"><div class="empty-tree">Select a block to edit.</div></div>
   </div>
 </main>
 
@@ -163,7 +266,6 @@ let selPath = null;
 let clipboard = null;
 let dirty = false;
 
-// ---- Boot ----
 function normalizeNode(n){
   if (!n.params) n.params = {};
   if (!n.children) n.children = {};
@@ -180,7 +282,7 @@ setStatus('loading…', {spin:true});
   }catch(e){ setStatus('failed: '+e, {err:true}); return; }
   for (const s of allSeqs) (s.nodes||[]).forEach(normalizeNode);
   if (seqId) seq = allSeqs.find(s => s.id === seqId);
-  if (!seq) {
+  if (!seq){
     seq = { id:'', name:'New sequence', cooldownMs:60000, nodes:[] };
     allSeqs.push(seq);
   }
@@ -189,39 +291,32 @@ setStatus('loading…', {spin:true});
   $('#seqName').oninput = e => { seq.name = e.target.value; markDirty(); };
   $('#cooldown').oninput = e => { seq.cooldownMs = parseInt(e.target.value,10)||0; markDirty(); };
   setStatus('');
-  renderPalette();
-  renderTree();
-  renderClip();
+  renderPalette(); renderTree(); renderClip();
 })();
 
 window.addEventListener('beforeunload', e => {
-  if (dirty){ e.preventDefault(); e.returnValue = ''; }
+  if (dirty){ e.preventDefault(); e.returnValue=''; }
 });
 window.addEventListener('keydown', e => {
-  if ((e.metaKey||e.ctrlKey) && e.key === 's'){ e.preventDefault(); save(); }
-  if ((e.metaKey||e.ctrlKey) && e.key === 'd' && selPath){
-    e.preventDefault(); duplicateSelected();
-  }
-  if (e.key === 'Escape'){ selPath=null; renderTree(); renderInspector(); }
-  if (e.key === 'Delete' && selPath){
-    e.preventDefault();
-    deleteNode(selPath);
-  }
+  if ((e.metaKey||e.ctrlKey) && e.key==='s'){ e.preventDefault(); save(); }
+  if ((e.metaKey||e.ctrlKey) && e.key==='d' && selPath){ e.preventDefault(); duplicateSelected(); }
+  if ((e.metaKey||e.ctrlKey) && e.key==='v' && clipboard){ e.preventDefault(); pasteHere(); }
+  if (e.key==='Escape'){ selPath=null; renderTree(); renderInspector(); }
+  if (e.key==='Delete' && selPath && !isEditing(e.target)){ e.preventDefault(); deleteNode(selPath); }
 });
+function isEditing(el){ return el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName); }
 
-function markDirty(){ dirty = true; updateDirtyUI(); }
-function clearDirty(){ dirty = false; updateDirtyUI(); }
-function updateDirtyUI(){ $('#btnSave').classList.toggle('dirty', dirty); }
+function markDirty(){ dirty=true; $('#btnSave').classList.add('dirty'); }
+function clearDirty(){ dirty=false; $('#btnSave').classList.remove('dirty'); }
 
-// ---- Status ----
 function setStatus(msg, opts){
   const el = $('#status');
   el.classList.remove('err','ok');
-  if (opts && opts.err) el.classList.add('err');
-  if (opts && opts.ok)  el.classList.add('ok');
+  if (opts?.err) el.classList.add('err');
+  if (opts?.ok)  el.classList.add('ok');
   el.innerHTML = '';
-  if (opts && opts.spin){ const s=document.createElement('span'); s.className='spin'; el.appendChild(s); }
-  if (msg){ el.appendChild(document.createTextNode(msg)); }
+  if (opts?.spin){ const s=document.createElement('span'); s.className='spin'; el.appendChild(s); }
+  if (msg) el.appendChild(document.createTextNode(msg));
 }
 
 // ---- Palette ----
@@ -230,214 +325,276 @@ function renderPalette(){
   for (const b of schema.blocks) (cats[b.category||'Other'] ||= []).push(b);
   $('#palette').innerHTML = Object.keys(cats).sort().map(cat => `
     <div class="cat">
-      <div class="lab">${cat}</div>
-      ${cats[cat].map(b => `<button data-add="${b.type}">${b.label}</button>`).join('')}
+      <div class="lab">${escapeHtml(cat)}</div>
+      ${cats[cat].map(b => `<button data-add="${escapeAttr(b.type)}">${escapeHtml(b.label)}</button>`).join('')}
     </div>`).join('');
   $('#palette').querySelectorAll('[data-add]').forEach(b => b.onclick = ()=>addNode(b.dataset.add));
 }
-
-function blockSchema(t){ return schema.blocks.find(b => b.type === t); }
-function predicateSchema(t){ return schema.predicates.find(p => p.type === t); }
+function blockSchema(t){ return schema.blocks.find(b=>b.type===t); }
+function predicateSchema(t){ return schema.predicates.find(p=>p.type===t); }
 function defaultParams(fields){
-  const p = {};
-  for (const f of fields||[]) if (f.default !== undefined) {
-    if (f.type === 'int') p[f.key] = parseInt(f.default,10);
-    else if (f.type === 'bool') p[f.key] = f.default === 'true';
-    else p[f.key] = f.default;
+  const p={};
+  for (const f of fields||[]) if (f.default !== undefined){
+    if (f.type==='int') p[f.key]=parseInt(f.default,10);
+    else if (f.type==='bool') p[f.key]=f.default==='true';
+    else p[f.key]=f.default;
   }
   return p;
 }
 function newNode(type){
-  const sch = blockSchema(type);
-  const node = { type, params:defaultParams(sch.fields), children:{} };
-  if (sch.childSlots) for (const s of sch.childSlots) node.children[s] = [];
-  if (type === 'if') {
-    const p0 = schema.predicates[0];
-    if (p0) node.params.predicate = { type:p0.type, params:defaultParams(p0.fields) };
+  const sch=blockSchema(type);
+  const node={type,params:defaultParams(sch.fields),children:{}};
+  if (sch.childSlots) for (const s of sch.childSlots) node.children[s]=[];
+  if (type==='if'){
+    const p0=schema.predicates[0];
+    if (p0) node.params.predicate={type:p0.type,params:defaultParams(p0.fields)};
   }
   return node;
 }
 
 // ---- Path utils ----
 function getList(path){
-  let cur = seq.nodes;
-  for (let i = 0; i + 1 < path.length; i += 2) cur = cur[path[i]].children[path[i+1]];
+  let cur=seq.nodes;
+  for (let i=0;i+1<path.length;i+=2) cur=cur[path[i]].children[path[i+1]];
   return cur;
 }
 function getNode(path){
   if (!path) return null;
-  const list = getList(path.slice(0, -1));
-  return list[path[path.length - 1]];
+  const list=getList(path.slice(0,-1));
+  return list[path[path.length-1]];
 }
-function selectPath(p){ selPath = p; renderTree(); renderInspector(); }
+function selectPath(p){ selPath=p; renderTree(); renderInspector(); }
+
+// Returns {parent, idx} — where new content should go, defaulting to:
+//   - if a control-flow block is selected: append into its first child slot
+//   - if a leaf is selected: insert *after* it in the same parent
+//   - otherwise: append at root
+function insertionPoint(){
+  if (!selPath) return {parent:[], idx:seq.nodes.length};
+  const node=getNode(selPath);
+  const sch=blockSchema(node.type);
+  if (sch?.childSlots?.length){
+    const slot=sch.childSlots[0];
+    const parent=[...selPath, slot];
+    return {parent, idx:getList(parent).length};
+  }
+  const parent=selPath.slice(0,-1);
+  return {parent, idx:selPath[selPath.length-1]+1};
+}
 
 // ---- Tree edits ----
-function targetPathForInsertion(){
-  // Default: root. If a block with childSlots is selected, append to its first slot.
-  // Otherwise, insert after the selected block in its parent list.
-  if (!selPath) return [];
-  const node = getNode(selPath);
-  const sch = blockSchema(node.type);
-  if (sch && sch.childSlots && sch.childSlots.length) return [...selPath, sch.childSlots[0]];
-  return selPath.slice(0, -1);
-}
 function addNode(type){
-  const path = targetPathForInsertion();
-  const list = getList(path);
-  list.push(newNode(type));
-  selPath = [...path, list.length - 1];
+  const {parent, idx} = insertionPoint();
+  const list=getList(parent);
+  list.splice(idx, 0, newNode(type));
+  selPath=[...parent, idx];
   markDirty(); renderTree(); renderInspector();
 }
 function deleteNode(path){
-  const list = getList(path.slice(0,-1));
-  list.splice(path[path.length-1], 1);
-  selPath = null;
-  markDirty(); renderTree(); renderInspector();
+  const list=getList(path.slice(0,-1));
+  list.splice(path[path.length-1],1);
+  selPath=null; markDirty(); renderTree(); renderInspector();
 }
 function moveNode(path, delta){
-  const list = getList(path.slice(0,-1));
-  const i = path[path.length-1];
-  const j = i + delta;
-  if (j < 0 || j >= list.length) return;
-  [list[i], list[j]] = [list[j], list[i]];
-  selPath = [...path.slice(0,-1), j];
+  const list=getList(path.slice(0,-1));
+  const i=path[path.length-1]; const j=i+delta;
+  if (j<0||j>=list.length) return;
+  [list[i],list[j]]=[list[j],list[i]];
+  selPath=[...path.slice(0,-1), j];
   markDirty(); renderTree(); renderInspector();
 }
 function deepClone(n){ return JSON.parse(JSON.stringify(n)); }
 function copyNode(path){
-  clipboard = deepClone(getNode(path));
-  setStatus('copied · paste with ⌘V', {ok:true});
-  setTimeout(()=>setStatus(''), 1800);
+  clipboard=deepClone(getNode(path));
+  setStatus('copied — paste with ⌘V', {ok:true});
+  setTimeout(()=>setStatus(''),1500);
   renderClip();
 }
 function cutNode(path){
-  clipboard = deepClone(getNode(path));
-  deleteNode(path);
-  renderClip();
+  clipboard=deepClone(getNode(path));
+  deleteNode(path); renderClip();
 }
 function pasteHere(){
   if (!clipboard) return;
-  const path = targetPathForInsertion();
-  const list = getList(path);
-  list.push(deepClone(clipboard));
-  selPath = [...path, list.length - 1];
+  const {parent, idx} = insertionPoint();
+  const list=getList(parent);
+  list.splice(idx, 0, deepClone(clipboard));
+  selPath=[...parent, idx];
   markDirty(); renderTree(); renderInspector();
 }
-function clearClip(){ clipboard = null; renderClip(); }
+function clearClip(){ clipboard=null; renderClip(); }
 function duplicateSelected(){
   if (!selPath) return;
-  const list = getList(selPath.slice(0,-1));
-  const i = selPath[selPath.length-1];
-  list.splice(i+1, 0, deepClone(list[i]));
-  selPath = [...selPath.slice(0,-1), i+1];
+  const list=getList(selPath.slice(0,-1));
+  const i=selPath[selPath.length-1];
+  list.splice(i+1,0,deepClone(list[i]));
+  selPath=[...selPath.slice(0,-1), i+1];
   markDirty(); renderTree(); renderInspector();
 }
-window.addEventListener('keydown', e => {
-  if ((e.metaKey||e.ctrlKey) && e.key === 'v' && clipboard){ e.preventDefault(); pasteHere(); }
-});
 
 function renderClip(){
-  const el = $('#clip');
-  if (!clipboard){ el.hidden = true; return; }
-  el.hidden = false;
-  const lab = clipboard.params && clipboard.params._label;
-  el.innerHTML = `<strong>${escapeHtml(lab||clipboard.type)}</strong>
-    <span style="color:var(--ink-3)">${escapeHtml(clipboard.type)}</span>
+  const el=$('#clip');
+  if (!clipboard){ el.hidden=true; return; }
+  el.hidden=false;
+  const lab=clipboard.params?._label;
+  el.innerHTML=`<div class="ttl">Clipboard</div>
+    <div class="desc">${escapeHtml(lab||clipboard.type)}</div>
+    <div class="ty">${escapeHtml(clipboard.type)}</div>
     <div class="clip-actions">
-      <button onclick="pasteHere()">paste here</button>
-      <button onclick="clearClip()">clear</button>
+      <button onclick="pasteHere()">Paste here</button>
+      <button onclick="clearClip()">Clear</button>
     </div>`;
 }
 
 // ---- Tree render ----
+function missingRequired(n, sch){
+  if (!sch) return [];
+  return (sch.fields||[]).filter(f => {
+    if (f.key==='predicate') return !n.params[f.key]||!n.params[f.key].type;
+    if (!f.required) return false;
+    const v=n.params[f.key];
+    return v===undefined||v===null||v==='';
+  }).map(f => f.label||f.key);
+}
+
 function renderTree(){
-  $('#tree').innerHTML = renderList(seq.nodes, []) ||
+  $('#tree').innerHTML=renderList(seq.nodes,[]) ||
     '<div class="empty-tree">Empty. Pick a block from the palette.</div>';
   $('#tree').querySelectorAll('[data-path]').forEach(el => {
     el.onclick = ev => {
-      if (ev.target.tagName === 'BUTTON') return;
+      if (ev.target.closest('button')) return;
       ev.stopPropagation();
       selectPath(JSON.parse(el.dataset.path));
     };
+    el.ondragstart = ev => onDragStart(el, ev);
+    el.ondragover  = ev => onDragOver(el, ev);
+    el.ondragleave = ev => onDragLeave(el, ev);
+    el.ondrop      = ev => onDrop(el, ev);
+    el.ondragend   = ev => onDragEnd(el, ev);
   });
   $('#tree').querySelectorAll('[data-act]').forEach(b => {
     b.onclick = ev => {
       ev.stopPropagation();
-      const path = JSON.parse(b.dataset.path);
-      const a = b.dataset.act;
-      if (a === 'up')   moveNode(path, -1);
-      if (a === 'down') moveNode(path, 1);
-      if (a === 'copy') copyNode(path);
-      if (a === 'cut')  cutNode(path);
-      if (a === 'del')  deleteNode(path);
+      const p=JSON.parse(b.dataset.path); const a=b.dataset.act;
+      if (a==='up') moveNode(p,-1);
+      if (a==='down') moveNode(p,1);
+      if (a==='copy') copyNode(p);
+      if (a==='cut') cutNode(p);
+      if (a==='del') deleteNode(p);
     };
   });
 }
 
-function missingRequired(n, sch){
-  if (!sch) return [];
-  return (sch.fields||[]).filter(f => {
-    if (f.key === 'predicate') return !n.params[f.key] || !n.params[f.key].type;
-    if (!f.required) return false;
-    const v = n.params[f.key];
-    return v === undefined || v === null || v === '';
-  }).map(f => f.label || f.key);
+// ---- Drag-and-drop reordering (vertical, same-slot only) ----
+let dragSrc = null; // {path, parentKey}
+
+function pathParentKey(p){ return JSON.stringify(p.slice(0,-1)); }
+
+function onDragStart(el, ev){
+  const path = JSON.parse(el.dataset.path);
+  dragSrc = { path, parentKey: pathParentKey(path) };
+  el.classList.add('dragging');
+  ev.dataTransfer.effectAllowed = 'move';
+  // some browsers require non-empty data
+  try { ev.dataTransfer.setData('text/plain', JSON.stringify(path)); } catch {}
+}
+function onDragOver(el, ev){
+  if (!dragSrc) return;
+  const path = JSON.parse(el.dataset.path);
+  // only same-parent reordering
+  if (pathParentKey(path) !== dragSrc.parentKey) return;
+  ev.preventDefault();
+  const r = el.getBoundingClientRect();
+  const before = (ev.clientY - r.top) < r.height / 2;
+  el.classList.toggle('drop-above', before);
+  el.classList.toggle('drop-below', !before);
+  ev.dataTransfer.dropEffect = 'move';
+}
+function onDragLeave(el){
+  el.classList.remove('drop-above','drop-below');
+}
+function onDrop(el, ev){
+  if (!dragSrc) return;
+  const tgtPath = JSON.parse(el.dataset.path);
+  if (pathParentKey(tgtPath) !== dragSrc.parentKey) return;
+  ev.preventDefault();
+  const r = el.getBoundingClientRect();
+  const before = (ev.clientY - r.top) < r.height / 2;
+  const parent = tgtPath.slice(0,-1);
+  const list = getList(parent);
+  const fromIdx = dragSrc.path[dragSrc.path.length-1];
+  let toIdx = tgtPath[tgtPath.length-1] + (before ? 0 : 1);
+  if (toIdx > fromIdx) toIdx--;
+  if (toIdx === fromIdx){ el.classList.remove('drop-above','drop-below'); return; }
+  const [moved] = list.splice(fromIdx, 1);
+  list.splice(toIdx, 0, moved);
+  selPath = [...parent, toIdx];
+  el.classList.remove('drop-above','drop-below');
+  markDirty(); renderTree(); renderInspector();
+}
+function onDragEnd(el){
+  el.classList.remove('dragging');
+  document.querySelectorAll('.drop-above,.drop-below').forEach(e => e.classList.remove('drop-above','drop-below'));
+  dragSrc = null;
 }
 
 function renderList(list, basePath){
-  return (list||[]).map((n, i) => {
-    const path = [...basePath, i];
-    const sch = blockSchema(n.type);
-    const sel = selPath && JSON.stringify(selPath) === JSON.stringify(path);
-    const dis = !!(n.params && n.params._disabled);
-    const lab = (n.params && n.params._label) || '';
-    const miss = missingRequired(n, sch);
-    const summary = renderSummary(n, sch);
+  return (list||[]).map((n,i) => {
+    const path=[...basePath,i];
+    const sch=blockSchema(n.type);
+    const sel=selPath && JSON.stringify(selPath)===JSON.stringify(path);
+    const dis=!!(n.params&&n.params._disabled);
+    const lab=(n.params&&n.params._label)||'';
+    const miss=missingRequired(n,sch);
+    const summary=renderSummary(n,sch);
+    const pathStr=JSON.stringify(path);
 
-    if (n.type === 'divider') {
-      return `<div class="node divider ${sel?'selected':''}" data-path='${JSON.stringify(path)}'>
+    if (n.type==='divider'){
+      return `<div class="node divider${sel?' selected':''}" draggable="true" data-path='${pathStr}'>
         <div class="body"><span class="label">${escapeHtml((n.params&&n.params.text)||'—')}</span></div>
         <div class="ctrl">
-          <button data-act="up" data-path='${JSON.stringify(path)}'>↑</button>
-          <button data-act="down" data-path='${JSON.stringify(path)}'>↓</button>
-          <button data-act="copy" data-path='${JSON.stringify(path)}'>copy</button>
-          <button data-act="del" data-path='${JSON.stringify(path)}' class="danger">✕</button>
+          <button data-act="up" data-path='${pathStr}' title="Move up">↑</button>
+          <button data-act="down" data-path='${pathStr}' title="Move down">↓</button>
+          <button data-act="copy" data-path='${pathStr}'>Copy</button>
+          <button data-act="del" data-path='${pathStr}' class="danger">✕</button>
         </div>
       </div>`;
     }
 
-    let slots = '';
-    if (sch && sch.childSlots) {
-      slots = sch.childSlots.map(s => `
+    let slots='';
+    if (sch?.childSlots){
+      slots=sch.childSlots.map(s => `
         <div class="slot">
-          <div class="slot-label">${s}</div>
-          ${renderList(n.children[s], [...path, s]) || '<div class="empty-tree" style="padding:6px 0">empty — drop a block here</div>'}
+          <div class="slot-label">${escapeHtml(s)}</div>
+          ${renderList(n.children[s],[...path,s]) || '<div class="empty-tree">empty — add or paste a block here</div>'}
         </div>`).join('');
     }
 
-    const cls = ['node'];
+    const cls=['node'];
     if (sel) cls.push('selected');
     if (dis) cls.push('disabled');
     if (miss.length) cls.push('invalid');
 
     return `
-      <div class="${cls.join(' ')}" data-path='${JSON.stringify(path)}'>
+      <div class="${cls.join(' ')}" draggable="true" data-path='${pathStr}'>
         <span class="badge">${i+1}</span>
         <div class="body">
-          <span class="label ${lab?'':'empty'}">${escapeHtml(lab || '— no label')}</span>
+          <div class="row1">
+            <span class="label${lab?'':' empty'}">${escapeHtml(lab || '— no label —')}</span>
+            <span class="pill">${escapeHtml(n.type)}</span>
+          </div>
           <div class="info">
-            <span class="type">${escapeHtml(n.type)}</span>
-            ${summary?`<span class="summary">${escapeHtml(summary)}</span>`:''}
-            ${miss.length?`<span class="miss">missing: ${escapeHtml(miss.join(', '))}</span>`:''}
-            ${dis?`<span class="type" style="color:var(--accent)">disabled</span>`:''}
+            ${summary?escapeHtml(summary):'<span style="color:var(--fg-3)">—</span>'}
+            ${miss.length?`<span class="miss">missing ${escapeHtml(miss.join(', '))}</span>`:''}
+            ${dis?'<span class="off">disabled</span>':''}
           </div>
         </div>
         <div class="ctrl">
-          <button data-act="up" data-path='${JSON.stringify(path)}'>↑</button>
-          <button data-act="down" data-path='${JSON.stringify(path)}'>↓</button>
-          <button data-act="copy" data-path='${JSON.stringify(path)}'>copy</button>
-          <button data-act="cut" data-path='${JSON.stringify(path)}'>cut</button>
-          <button data-act="del" data-path='${JSON.stringify(path)}' class="danger">✕</button>
+          <button data-act="up" data-path='${pathStr}' title="Move up">↑</button>
+          <button data-act="down" data-path='${pathStr}' title="Move down">↓</button>
+          <button data-act="copy" data-path='${pathStr}' title="Copy">⎘</button>
+          <button data-act="cut" data-path='${pathStr}' title="Cut">✂</button>
+          <button data-act="del" data-path='${pathStr}' class="danger" title="Delete">✕</button>
         </div>
       </div>
       ${slots}`;
@@ -446,162 +603,156 @@ function renderList(list, basePath){
 
 function renderSummary(n, sch){
   if (!sch) return '?';
-  const p = n.params || {};
-  if (n.type === 'wait') return (p.ms||0) + 'ms';
-  if (n.type === 'repeat') return '× ' + (p.count||1) + (p.interval_ms?` (${p.interval_ms}ms gap)`:'');
-  if (n.type === 'wol') return p.mac || '';
-  if (n.type === 'wifi-hop') return p.ssid || '';
-  if (n.type === 'samsung-key') return (p.ip?p.ip+' · ':'') + (p.key || '');
-  if (n.type === 'if') return (p.predicate||{}).type || '';
-  if (n.type === 'divider') return '';
+  const p=n.params||{};
+  if (n.type==='wait') return (p.ms||0)+' ms';
+  if (n.type==='repeat') return '× '+(p.count||1)+(p.interval_ms?` · ${p.interval_ms} ms gap`:'');
+  if (n.type==='wol') return p.mac||'';
+  if (n.type==='wifi-hop') return p.ssid||'';
+  if (n.type==='samsung-key') return (p.ip?p.ip+' · ':'')+(p.key||'');
+  if (n.type==='if') return (p.predicate||{}).type||'';
+  if (n.type==='divider') return '';
   return '';
 }
 
 // ---- Inspector ----
 function renderInspector(){
-  if (!selPath) { $('#inspector').innerHTML = '<div class="empty-tree">Select a block.</div>'; return; }
-  const node = getNode(selPath);
-  const sch = blockSchema(node.type);
-  const disabled = !!(node.params && node.params._disabled);
-  const head = `<div class="insp-head">
+  if (!selPath){ $('#inspector').innerHTML='<div class="empty-tree">Select a block to edit.</div>'; return; }
+  const node=getNode(selPath);
+  const sch=blockSchema(node.type);
+  const disabled=!!(node.params&&node.params._disabled);
+  let html=`<div class="insp-head">
       <span class="ty">${escapeHtml(node.type)}</span>
-      <label class="toggle"><input type="checkbox" id="p__disabled" ${disabled?'checked':''}/> disable</label>
+      <label class="toggle"><input type="checkbox" id="p__disabled" ${disabled?'checked':''}/> disabled</label>
     </div>`;
-  // Always show label as a virtual field above the schema fields
-  let html = `<div class="field">
-    <label>Label <span style="color:var(--ink-3)">(your note)</span></label>
-    <input id="p__label" value="${escapeAttr((node.params&&node.params._label)||'')}" />
+  html+=`<div class="field field-label-text">
+    <label>Label <span style="color:var(--fg-3);font-weight:400;font-size:11px;letter-spacing:0;text-transform:none">your annotation</span></label>
+    <input id="p__label" placeholder="What does this step do?" value="${escapeAttr((node.params&&node.params._label)||'')}" />
   </div>`;
-  html += (sch?.fields||[]).map(f => fieldHtml(f, node.params[f.key], 'p_'+f.key, node)).join('');
-  $('#inspector').innerHTML = head + (html || '<div class="empty-tree">No fields.</div>');
-
-  attachLabelField(node);
-  attachDisableField(node);
+  html+=(sch?.fields||[]).map(f => fieldHtml(f, node.params[f.key], 'p_'+f.key)).join('');
+  $('#inspector').innerHTML=html;
+  attachLabelField(node); attachDisableField(node);
   for (const f of sch?.fields||[]) attachField(node, f, 'p_'+f.key);
 }
 
-function fieldHtml(f, val, id, node){
+function fieldHtml(f, val, id){
   const miss = f.required && (val===undefined||val===null||val==='');
-  const cls = miss ? 'missing' : '';
-  const reqMark = f.required ? '<span class="req">required</span>' : '';
-  const labelHtml = `<label>${escapeHtml(f.label||f.key)} ${reqMark}</label>`;
-  if (f.type === 'enum') {
-    const opts = (f.enum||'').split(',').map(o => `<option ${val===o?'selected':''}>${o}</option>`).join('');
-    return `<div class="field">${labelHtml}<select id="${id}" class="${cls}">${opts}</select></div>`;
+  const cls = miss?'missing':'';
+  const reqMark = f.required?'<span class="req" title="required">*</span>':'';
+  const label = `<label>${escapeHtml(f.label||f.key)}${reqMark}</label>`;
+  if (f.type==='enum'){
+    const opts=(f.enum||'').split(',').map(o=>`<option ${val===o?'selected':''}>${escapeHtml(o)}</option>`).join('');
+    return `<div class="field">${label}<select id="${id}" class="${cls}">${opts}</select></div>`;
   }
-  if (f.type === 'bool')
-    return `<div class="field"><label><input type="checkbox" id="${id}" ${val?'checked':''}> ${escapeHtml(f.label)} ${reqMark}</label></div>`;
-  if (f.type === 'stringList')
-    return `<div class="field">${labelHtml}<textarea id="${id}" class="${cls}" placeholder="comma-separated">${escapeHtml(val||'')}</textarea></div>`;
-  if (f.type === 'int')
-    return `<div class="field">${labelHtml}<input id="${id}" class="${cls}" type="number" value="${val??''}" /></div>`;
-  if (f.type === 'mac')
-    return `<div class="field">${labelHtml}<input id="${id}" class="${cls}" placeholder="AA:BB:CC:DD:EE:FF" value="${escapeAttr(val||'')}" /></div>`;
-  if (f.type === 'predicateRef') {
-    const cur = val || { type:'', params:{} };
-    const opts = schema.predicates.map(p => `<option value="${p.type}" ${cur.type===p.type?'selected':''}>${p.label}</option>`).join('');
-    const sub = predicateSchema(cur.type);
+  if (f.type==='bool')
+    return `<div class="field"><label><input type="checkbox" id="${id}" ${val?'checked':''}/> ${escapeHtml(f.label)}${reqMark}</label></div>`;
+  if (f.type==='stringList')
+    return `<div class="field">${label}<textarea id="${id}" class="${cls}" placeholder="comma-separated">${escapeHtml(val||'')}</textarea></div>`;
+  if (f.type==='int')
+    return `<div class="field">${label}<input id="${id}" class="${cls}" type="number" value="${val??''}"/></div>`;
+  if (f.type==='mac')
+    return `<div class="field">${label}<input id="${id}" class="${cls}" placeholder="AA:BB:CC:DD:EE:FF" value="${escapeAttr(val||'')}"/></div>`;
+  if (f.type==='predicateRef'){
+    const cur=val||{type:'',params:{}};
+    const opts=schema.predicates.map(p=>`<option value="${escapeAttr(p.type)}" ${cur.type===p.type?'selected':''}>${escapeHtml(p.label)}</option>`).join('');
+    const sub=predicateSchema(cur.type);
     const subFields = sub ? (sub.fields||[]).map(sf => fieldHtml(sf, (cur.params||{})[sf.key], id+'_'+sf.key)).join('') : '';
-    return `<div class="field">${labelHtml}<select id="${id}_type">${opts}</select><div style="margin-top:8px">${subFields}</div></div>`;
+    return `<div class="field">${label}<select id="${id}_type">${opts}</select><div style="margin-top:10px">${subFields}</div></div>`;
   }
-  return `<div class="field">${labelHtml}<input id="${id}" class="${cls}" value="${escapeAttr(val||'')}" /></div>`;
+  return `<div class="field">${label}<input id="${id}" class="${cls}" value="${escapeAttr(val||'')}"/></div>`;
 }
 
 function attachLabelField(node){
-  const el = document.getElementById('p__label');
-  el.oninput = e => { node.params._label = e.target.value; markDirty(); renderTree(); };
+  document.getElementById('p__label').oninput = e => { node.params._label=e.target.value; markDirty(); renderTree(); };
 }
 function attachDisableField(node){
-  const el = document.getElementById('p__disabled');
-  el.onchange = e => {
-    if (e.target.checked) node.params._disabled = true;
-    else delete node.params._disabled;
+  document.getElementById('p__disabled').onchange = e => {
+    if (e.target.checked) node.params._disabled=true; else delete node.params._disabled;
     markDirty(); renderTree();
   };
 }
 function attachField(node, f, id){
-  if (f.type === 'predicateRef') {
-    const sel = document.getElementById(id+'_type');
+  if (f.type==='predicateRef'){
+    const sel=document.getElementById(id+'_type');
     sel.onchange = e => {
-      const sub = predicateSchema(e.target.value);
-      node.params[f.key] = { type: e.target.value, params: defaultParams(sub.fields||[]) };
+      const sub=predicateSchema(e.target.value);
+      node.params[f.key]={type:e.target.value, params:defaultParams(sub.fields||[])};
       markDirty(); renderInspector(); renderTree();
     };
-    const sub = predicateSchema((node.params[f.key]||{}).type);
-    if (sub) for (const sf of sub.fields||[]) {
-      const el = document.getElementById(id+'_'+sf.key);
+    const sub=predicateSchema((node.params[f.key]||{}).type);
+    if (sub) for (const sf of sub.fields||[]){
+      const el=document.getElementById(id+'_'+sf.key);
       if (!el) continue;
       el.oninput = e => {
-        node.params[f.key].params[sf.key] = sf.type === 'int' ? parseInt(e.target.value,10) : e.target.value;
+        node.params[f.key].params[sf.key] = sf.type==='int'?parseInt(e.target.value,10):e.target.value;
         markDirty();
       };
     }
     return;
   }
-  const el = document.getElementById(id);
+  const el=document.getElementById(id);
   if (!el) return;
   el.oninput = e => {
-    let v = e.target.value;
-    if (f.type === 'int')  v = parseInt(v,10);
-    if (f.type === 'bool') v = e.target.checked;
-    node.params[f.key] = v;
+    let v=e.target.value;
+    if (f.type==='int') v=parseInt(v,10);
+    if (f.type==='bool') v=e.target.checked;
+    node.params[f.key]=v;
     el.classList.toggle('missing', f.required && (v===''||v===null||v===undefined||(f.type==='int'&&isNaN(v))));
     markDirty();
-    if (['ssid','count','mac','key','interval_ms','ms','text'].includes(f.key)) renderTree();
+    if (['ssid','count','mac','key','interval_ms','ms','text','ip'].includes(f.key)) renderTree();
   };
 }
 
 // ---- Save / run ----
 async function save(){
-  if (!seq.name) seq.name = 'untitled';
+  if (!seq.name) seq.name='untitled';
   if (!allSeqs.includes(seq)) allSeqs.push(seq);
-  $('#btnSave').disabled = true;
+  $('#btnSave').disabled=true;
   setStatus('saving…', {spin:true});
   try{
-    const r = await fetch('/api/sequences', {
+    const r=await fetch('/api/sequences',{
       method:'PUT', headers:{'content-type':'application/json'},
-      body: JSON.stringify(allSeqs),
+      body:JSON.stringify(allSeqs),
     });
-    if (!r.ok){ setStatus('save failed: '+r.status, {err:true}); return; }
-    const updated = await r.json();
-    if (!seq.id) {
-      const m = updated.find(s => s.name === seq.name && s.nodes.length === seq.nodes.length);
-      if (m) seq.id = m.id;
+    if (!r.ok){ setStatus('save failed: '+r.status,{err:true}); return; }
+    const updated=await r.json();
+    if (!seq.id){
+      const m=updated.find(s=>s.name===seq.name && s.nodes.length===seq.nodes.length);
+      if (m) seq.id=m.id;
     }
     clearDirty();
     setStatus('saved', {ok:true});
-    setTimeout(()=>setStatus(''), 1500);
+    setTimeout(()=>setStatus(''),1500);
     if (seq.id && !location.search.includes(seq.id))
       history.replaceState(null,'','/edit?id='+seq.id);
-  }catch(e){ setStatus('save failed: '+e, {err:true}); }
-  finally{ $('#btnSave').disabled = false; }
+  }catch(e){ setStatus('save failed: '+e,{err:true}); }
+  finally{ $('#btnSave').disabled=false; }
 }
 
 async function testRun(){
   if (dirty || !seq.id) await save();
   if (!seq.id) return;
-  $('#btnTest').disabled = true;
+  $('#btnTest').disabled=true;
   setStatus('dispatching…', {spin:true});
   try{
-    const r = await fetch('/api/run?id='+encodeURIComponent(seq.id),{method:'POST'});
-    if (!r.ok){ setStatus('run rejected: '+r.status, {err:true}); $('#btnTest').disabled=false; return; }
+    const r=await fetch('/api/run?id='+encodeURIComponent(seq.id),{method:'POST'});
+    if (!r.ok){ setStatus('run rejected: '+r.status,{err:true}); $('#btnTest').disabled=false; return; }
     setStatus('running…', {spin:true});
     await poll();
-  }catch(e){ setStatus('run failed: '+e, {err:true}); }
-  finally{ $('#btnTest').disabled = false; }
+  }catch(e){ setStatus('run failed: '+e,{err:true}); }
+  finally{ $('#btnTest').disabled=false; }
 }
 async function poll(){
   for (let i=0;i<240;i++){
     await new Promise(r=>setTimeout(r,500));
-    let s; try{ s = await fetch('/api/status').then(r=>r.json()); }catch{continue;}
+    let s; try{ s=await fetch('/api/status').then(r=>r.json()); }catch{continue;}
     if (s.running){ setStatus('running…', {spin:true}); continue; }
-    if (s.lastError){ setStatus('error: '+s.lastError, {err:true}); }
-    else { setStatus('done', {ok:true}); setTimeout(()=>setStatus(''),2400); }
+    if (s.lastError){ setStatus('error: '+s.lastError,{err:true}); }
+    else { setStatus('done',{ok:true}); setTimeout(()=>setStatus(''),2400); }
     return;
   }
   setStatus('still running (poll timed out)');
 }
 
-function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s){ return escapeHtml(s); }
 </script>
