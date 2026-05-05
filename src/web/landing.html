@@ -162,18 +162,27 @@ async function load(){
     </div>`).join('') : '<div class="empty">No sequences yet. <a href="/edit" style="color:var(--accent)">Create one ›</a></div>';
 
   const seqName = id => (seqs.find(s=>s.id===id)||{}).name || id || '—';
-  $('#trigs').innerHTML = trigs.length ? trigs.map((t,i) => `
+  const trigSummary = t => {
+    const p = t.params || {};
+    if (t.type === 'http-route') return p.path || '(no path)';
+    if (t.type === 'ble-mac')    return p.mac  || '(no mac)';
+    return '';
+  };
+  $('#trigs').innerHTML = trigs.length ? trigs.map((t,i) => {
+    const summary = trigSummary(t);
+    return `
     <div class="row">
       <div class="badge">${(i+1).toString().padStart(2,'0')}</div>
       <div class="body">
-        <div class="name mono">${esc(t.type)}</div>
+        <div class="name mono">${esc(t.type)}${summary?` <span style="color:var(--fg-2)">· ${esc(summary)}</span>`:''}</div>
         <div class="meta">
           → ${esc(seqName(t.sequenceId))}
           <span class="sep">·</span>
           ${t.enabled?'<span style="color:var(--ok)">enabled</span>':'<span style="color:var(--fg-3)">disabled</span>'}
         </div>
       </div>
-    </div>`).join('') : '<div class="empty">No triggers bound.</div>';
+    </div>`;
+  }).join('') : '<div class="empty">No triggers bound.</div>';
 }
 function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function attr(s){ return esc(s).replace(/'/g,"\\'"); }
