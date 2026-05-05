@@ -1,8 +1,11 @@
 #include "HttpRouteTrigger.h"
+#include "QueryCoerce.h"
 #include "core/Registry.h"
+#include "core/Sequence.h"
 #include <ESPAsyncWebServer.h>
 #include <map>
 #include <string>
+#include <vector>
 
 using namespace seqb;
 
@@ -27,9 +30,24 @@ std::map<std::string, Active> g_active;
 
 static void registerHandler(Active& a) {
     if (!g_server) return;
-    // For now: handler fires with defaultArgs only. Task 6 will add query coercion.
     g_server->on(a.path.c_str(), HTTP_POST, [&a](AsyncWebServerRequest* req) {
-        a.cb(a.sequenceId, a.defaultArgs.as<JsonVariantConst>());
+        const Sequence* seq = a.lookup ? a.lookup(a.sequenceId) : nullptr;
+        std::vector<ParamDef> empty;
+        const auto& pdefs = seq ? seq->params : empty;
+
+        std::map<std::string, std::string> q;
+        for (size_t i = 0; i < req->params(); ++i) {
+            auto* p = req->getParam(i);
+            q.emplace(p->name().c_str(), p->value().c_str());
+        }
+
+        auto cr = coerceQueryArgs(a.defaultArgs.as<JsonVariantConst>(), pdefs, q);
+        if (!cr.ok) {
+            std::string body = std::string("{\"error\":\"") + cr.error + "\"}";
+            req->send(400, "application/json", body.c_str());
+            return;
+        }
+        a.cb(a.sequenceId, cr.doc.as<JsonVariantConst>());
         req->send(200, "text/plain", "queued");
     });
 }
@@ -67,7 +85,6 @@ void HttpRouteTrigger::bind(const std::string& id,
     if (!defaultArgs.isNull()) a.defaultArgs.set(defaultArgs);
     g_active[id] = std::move(a);
 
-    // For now: handler fires with defaultArgs only. Task 6 will add query coercion.
     registerHandler(g_active[id]);
 }
 
