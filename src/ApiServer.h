@@ -1,4 +1,5 @@
 #pragma once
+#include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include "core/SequenceStore.h"
 #include "core/TriggerStore.h"
@@ -9,7 +10,7 @@
 namespace seqb {
 
 struct ApiHooks {
-    std::function<void(const std::string& sequenceId)> enqueueRun;
+    std::function<void(const std::string& sequenceId, JsonVariantConst args)> enqueueRun;
     std::function<std::string()> currentStatusJson;
 };
 

@@ -59,25 +59,29 @@ void ApiServer::registerRoutes() {
     putTrigs->setMethod(HTTP_PUT);
     srv_.addHandler(putTrigs);
 
-    // POST /api/run?id=ABC — query-param contract to avoid regex routes.
-    srv_.on("/api/run", HTTP_POST, [this](AsyncWebServerRequest* req) {
-        if (!req->hasParam("id")) {
-            sendJson(req, R"({"error":"missing id"})", 400);
-            return;
-        }
-        std::string id = std::string(req->getParam("id")->value().c_str());
-        auto* s = seqs_.findById(id);
-        if (!s) {
-            sendJson(req, R"({"error":"unknown sequence"})", 404);
-            return;
-        }
-        if (s->broken) {
-            sendJson(req, R"({"error":"sequence is broken"})", 422);
-            return;
-        }
-        hooks_.enqueueRun(s->id);
-        sendJson(req, R"({"status":"queued"})");
-    });
+    // POST /api/run?id=ABC — accepts optional JSON body {"args": {...}}.
+    auto* runH = new AsyncCallbackJsonWebHandler(
+        "/api/run", [this](AsyncWebServerRequest* req, JsonVariant& json) {
+            if (!req->hasParam("id")) {
+                sendJson(req, R"({"error":"missing id"})", 400);
+                return;
+            }
+            std::string id = req->getParam("id")->value().c_str();
+            auto* s = seqs_.findById(id);
+            if (!s) {
+                sendJson(req, R"({"error":"unknown sequence"})", 404);
+                return;
+            }
+            if (s->broken) {
+                sendJson(req, R"({"error":"sequence is broken"})", 422);
+                return;
+            }
+            JsonVariantConst args = json["args"].as<JsonVariantConst>();
+            hooks_.enqueueRun(s->id, args);
+            sendJson(req, R"({"status":"queued"})");
+        });
+    runH->setMethod(HTTP_POST);
+    srv_.addHandler(runH);
 }
 
 }  // namespace seqb

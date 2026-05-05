@@ -50,14 +50,17 @@ uint32_t next_wifi_retry_ms_ = 0;
 // access is always inside loop()/handler call-sites, both single-thread on Arduino-ESP32.
 volatile bool sequence_pending_ = false;
 String pending_seq_id_;
+JsonDocument pending_args_;  // owned
 
 std::string lastError_;
 uint32_t lastRunMs_ = 0;
 bool running_ = false;
 
-void enqueueRun(const std::string& id) {
+void enqueueRun(const std::string& id, JsonVariantConst args = JsonVariantConst()) {
     if (sequence_pending_) return;  // 1-deep queue
     pending_seq_id_ = id.c_str();
+    pending_args_.clear();
+    if (!args.isNull()) pending_args_.set(args);
     sequence_pending_ = true;
 }
 
@@ -193,14 +196,14 @@ void enterRuntimeMode() {
     interp = new seqb::Interpreter(seqb::Registry::instance());
     trigMgr = new seqb::TriggerManager(
         seqb::Registry::instance(),
-        [](const std::string& sid, JsonVariantConst /*args*/) { enqueueRun(sid); },
+        [](const std::string& sid, JsonVariantConst args) { enqueueRun(sid, args); },
         [](const std::string& id) -> const seqb::Sequence* { return seqStore->findById(id); });
     seqStore->load();
     trigStore->load();
     seedDefaultsIfEmpty();
 
     static seqb::ApiHooks hooks{
-        [](const std::string& sid) { enqueueRun(sid); },
+        [](const std::string& sid, JsonVariantConst args) { enqueueRun(sid, args); },
         statusJson,
     };
     apiServer = new seqb::ApiServer(http, *seqStore, *trigStore, *trigMgr, hooks);
@@ -249,9 +252,10 @@ void loop() {
                 ctx.config = &cfg;
                 ctx.net = &net;
                 ctx.led = &led;
-                auto r = interp->runSequence(*seq, ctx);
+                auto r = interp->runSequence(*seq, ctx, pending_args_.as<JsonVariantConst>());
                 running_ = false;
                 lastRunMs_ = millis();
+                pending_args_.clear();
                 if (r.status == seqb::RunStatus::Failed) {
                     lastError_ = r.error;
                     led.setState(LedState::Error);
