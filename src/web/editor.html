@@ -1,0 +1,847 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>edit · esp32-sequencer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* Oceanic Next */
+:root{
+  --bg:#0E1A20;
+  --bg-2:#15242C;
+  --bg-3:#1F313A;
+  --fg:#D8DEE9;
+  --fg-2:#A7ADBA;
+  --fg-3:#65737E;
+  --rule:#2C3D47;
+  --rule-2:#1B2B34;
+  --accent:#6699CC;     /* blue */
+  --accent-2:#62B3B2;   /* cyan */
+  --warn:#F99157;       /* orange */
+  --danger:#EC5F67;     /* red */
+  --ok:#99C794;         /* green */
+  --yellow:#FAC863;
+  --purple:#C594C5;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);
+  font:14px/1.45 var(--sans);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+
+/* --- Header --- */
+header{
+  display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;
+  padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--rule);
+  position:sticky;top:0;z-index:10;
+}
+header .home{
+  width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--rule);border-radius:6px;color:var(--fg);text-decoration:none;
+  font-size:22px;line-height:1;background:var(--bg);
+}
+header .home:hover{background:var(--bg-2);border-color:var(--fg-3)}
+header .meta{display:flex;align-items:center;gap:18px;min-width:0}
+header .meta input#seqName{
+  font:600 19px/1.2 var(--sans);
+  letter-spacing:-0.01em;
+  border:0;background:transparent;color:var(--fg);
+  padding:4px 6px;border-radius:4px;
+  min-width:280px;
+}
+header .meta input#seqName:focus{outline:1px solid var(--rule);background:var(--bg-2)}
+header .cd{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg-2);white-space:nowrap}
+header .cd input{
+  width:88px;font:13px/1 var(--mono);text-align:right;
+  border:1px solid var(--rule);border-radius:4px;background:var(--bg);padding:5px 7px;
+}
+header .cd input:focus{outline:none;border-color:var(--fg-2)}
+header .actions{display:flex;gap:8px;align-items:center}
+
+/* --- Buttons --- */
+button,a.btn{
+  font:13px/1 var(--sans);font-weight:500;
+  padding:7px 12px;border-radius:6px;
+  background:var(--bg);border:1px solid var(--rule);color:var(--fg);
+  text-decoration:none;cursor:pointer;
+  transition:background .12s,border-color .12s,color .12s;
+}
+button:hover,a.btn:hover{background:var(--bg-2);border-color:var(--fg-3)}
+button:active{background:var(--bg-3)}
+button.primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600}
+button.primary:hover{background:#7faedb;border-color:#7faedb}
+button.primary.dirty{background:var(--warn);border-color:var(--warn);color:var(--bg)}
+button.primary.dirty:hover{background:#ffac76;border-color:#ffac76}
+button.primary.dirty::before{content:"● ";font-size:10px}
+button:disabled{opacity:.5;cursor:wait}
+.kbd{font:11px/1 var(--mono);padding:2px 5px;border:1px solid currentColor;opacity:.55;border-radius:3px;margin-left:6px}
+
+/* --- Layout --- */
+main{display:grid;grid-template-columns:240px 1fr 360px;height:calc(100vh - 53px)}
+@media (max-width:1000px){main{grid-template-columns:1fr;height:auto}}
+.col{overflow-y:auto;padding:18px 20px;border-right:1px solid var(--rule);background:var(--bg)}
+.col:nth-child(2){background:var(--bg-2)}
+.col:last-child{border-right:0}
+.col h3{
+  font:600 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.1em;
+  color:var(--fg-3);margin:0 0 14px;
+}
+
+/* --- Palette --- */
+.cat{margin-bottom:18px}
+.cat .lab{
+  font:600 10.5px/1.2 var(--sans);text-transform:uppercase;letter-spacing:.12em;
+  color:var(--fg-3);margin:0 0 6px;
+}
+.palette button{
+  display:block;width:100%;text-align:left;margin:3px 0;
+  padding:7px 10px;font-size:13px;font-weight:500;
+}
+.clip{
+  margin-top:18px;padding:12px;border:1px solid var(--rule);border-radius:6px;
+  background:var(--bg-2);font-size:12px;
+}
+.clip .ttl{
+  font:600 10.5px/1 var(--sans);text-transform:uppercase;letter-spacing:.12em;
+  color:var(--fg-3);margin-bottom:6px;
+}
+.clip .desc{font-weight:600;color:var(--fg);margin-bottom:2px}
+.clip .ty{font:11px/1.2 var(--mono);color:var(--fg-2)}
+.clip .clip-actions{display:flex;gap:6px;margin-top:10px}
+
+/* --- Tree --- */
+.node{
+  display:grid;grid-template-columns:auto 1fr auto;align-items:start;gap:14px;
+  padding:12px 14px;margin:6px 0;
+  background:var(--bg);border:1px solid var(--rule);border-radius:6px;
+  cursor:pointer;transition:border-color .1s,background .1s,box-shadow .1s,opacity .1s;
+}
+.node[draggable]{cursor:grab}
+.node[draggable]:active{cursor:grabbing}
+.node.dragging{opacity:.35}
+.node.drop-above{box-shadow:0 -2px 0 0 var(--accent)}
+.node.drop-below{box-shadow:0 2px 0 0 var(--accent)}
+.node:hover{border-color:var(--fg-3);background:var(--bg-3)}
+.node.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:var(--bg-3)}
+.node.disabled{opacity:.55}
+.node.disabled .label,.node.disabled .row2{text-decoration:line-through;text-decoration-color:var(--fg-3)}
+.node.invalid{border-color:var(--warn)}
+.node.invalid.selected{box-shadow:0 0 0 1px var(--warn) inset;border-color:var(--warn)}
+
+.node .badge{
+  width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;
+  font:13px/1 var(--mono);color:var(--accent-2);
+  border:1px solid var(--rule);border-radius:50%;background:var(--bg-2);
+  flex-shrink:0;margin-top:1px;
+}
+.node .body{min-width:0;display:flex;flex-direction:column;gap:5px}
+.node .label{
+  font:500 12.5px/1.3 var(--sans);color:var(--fg-2);
+  letter-spacing:.02em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.node .row2{
+  display:flex;align-items:center;gap:10px;
+  font:12.5px/1.2 var(--mono);color:var(--fg-2);
+}
+.node .row2 .mult{color:var(--fg);font-weight:500}
+.node .row3{
+  font:12.5px/1.4 var(--mono);color:var(--fg-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.node .row3 .v{color:var(--fg-2)}
+.node .row4{font:12.5px/1.3 var(--sans);font-weight:500;display:flex;gap:14px;flex-wrap:wrap}
+.node .row4 .miss{color:var(--warn)}
+.node .row4 .miss::before{content:"⚠ "}
+.node .row4 .off{color:var(--danger)}
+.node .pill{
+  font:11.5px/1 var(--mono);color:var(--accent-2);
+  padding:4px 8px;border:1px solid var(--rule);border-radius:3px;
+  white-space:nowrap;flex-shrink:0;background:var(--bg-2);
+}
+.node .ctrl{display:flex;gap:4px;opacity:0;transition:opacity .1s;margin-top:1px}
+.node:hover .ctrl,.node.selected .ctrl{opacity:1}
+.node .ctrl button{
+  padding:8px 12px;font:18px/1 var(--sans);border-color:transparent;
+  background:transparent;color:var(--fg-2);min-width:40px;height:36px;
+}
+.node .ctrl button:hover{border-color:var(--rule);color:var(--fg);background:var(--bg-2)}
+.node .ctrl button.danger:hover{border-color:var(--danger);color:var(--danger);background:var(--bg-2)}
+
+.node.divider{
+  border:0;border-top:1px solid var(--rule);background:transparent;border-radius:0;
+  padding:14px 0 4px;margin:14px 0 4px;
+  display:flex;align-items:baseline;gap:10px;
+}
+.node.divider .badge{display:none}
+.node.divider .body{flex:1;flex-direction:row;gap:10px;align-items:baseline}
+.node.divider .label{font:600 12px/1 var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--fg-2)}
+.node.divider::after{content:"";flex:1;border-bottom:1px dashed var(--rule);align-self:center;margin-left:6px}
+.node.divider.selected{background:var(--bg-2);padding:14px 12px 8px;box-shadow:none;border:1px solid var(--accent);border-radius:6px}
+
+.slot{margin-left:14px;padding-left:14px;border-left:1px dashed var(--rule)}
+.slot-label{
+  font:600 10.5px/1.2 var(--sans);text-transform:uppercase;letter-spacing:.12em;
+  color:var(--fg-3);margin:8px 0 4px;
+}
+.empty-tree{padding:20px 12px;color:var(--fg-3);font-size:13px;text-align:center;
+  border:1px dashed var(--rule);border-radius:6px;background:var(--bg);
+  transition:border-color .1s,background .1s,color .1s}
+.empty-tree.drop-into{border-color:var(--accent);background:var(--bg-3);color:var(--fg-2)}
+
+/* --- Inspector --- */
+.insp-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--rule);
+}
+.insp-head .ty{font:11px/1 var(--mono);color:var(--fg-2);
+  padding:4px 7px;border:1px solid var(--rule);border-radius:3px}
+.insp-head .toggle{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--fg-2)}
+.insp-head input[type=checkbox]{width:auto;margin:0;cursor:pointer}
+
+.field{margin:14px 0}
+.field label{display:flex;justify-content:space-between;align-items:baseline;
+  font:600 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--fg-2);
+  margin-bottom:5px}
+.field label .req{color:var(--danger);font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}
+.field input,.field select,.field textarea{
+  width:100%;padding:8px 10px;
+  font:13px/1.4 var(--mono);
+  background:var(--bg);border:1px solid var(--rule);border-radius:5px;color:var(--fg);
+  transition:border-color .1s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;
+}
+.field input.missing,.field select.missing,.field textarea.missing{
+  border-color:var(--warn);
+}
+.field textarea{min-height:64px;resize:vertical;font-family:var(--mono)}
+.field .hint{font-size:12px;color:var(--fg-3);margin-top:4px}
+.field-label-text input{font-family:var(--sans);font-weight:500}
+
+/* --- Status --- */
+#status{display:flex;align-items:center;gap:8px;font:12px/1 var(--sans);
+  color:var(--fg-2);max-width:320px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#status .spin{display:inline-block;width:11px;height:11px;border:1.5px solid var(--rule);
+  border-top-color:var(--fg);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+#status.err{color:var(--danger)}
+#status.ok{color:var(--ok)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* --- Misc --- */
+::selection{background:var(--accent);color:var(--bg)}
+input[type=number]{appearance:textfield;-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+</style>
+
+<header>
+  <a class="home" href="/" title="back">‹</a>
+  <div class="meta">
+    <input id="seqName" placeholder="Untitled sequence" />
+    <span class="cd">cooldown <input id="cooldown" type="number" min="0" step="1000" />ms</span>
+  </div>
+  <div class="actions">
+    <span id="status"></span>
+    <button id="btnTest" onclick="testRun()">Test run</button>
+    <button id="btnSave" class="primary" onclick="save()">Save<span class="kbd">⌘S</span></button>
+  </div>
+</header>
+
+<main>
+  <div class="col palette">
+    <h3>Add block</h3>
+    <div id="palette"></div>
+    <div id="clip" class="clip" hidden></div>
+  </div>
+  <div class="col">
+    <h3>Sequence</h3>
+    <div id="tree"></div>
+  </div>
+  <div class="col">
+    <h3>Inspector</h3>
+    <div id="inspector"><div class="empty-tree">Select a block to edit.</div></div>
+  </div>
+</main>
+
+<script>
+const $ = sel => document.querySelector(sel);
+const params = new URLSearchParams(location.search);
+const seqId = params.get('id');
+
+let schema = null;
+let allSeqs = [];
+let seq = null;
+let selPath = null;
+let clipboard = null;
+let dirty = false;
+
+function normalizeNode(n){
+  if (!n.params) n.params = {};
+  if (!n.children) n.children = {};
+  for (const k of Object.keys(n.children)) (n.children[k]||[]).forEach(normalizeNode);
+}
+
+setStatus('loading…', {spin:true});
+(async function init(){
+  try{
+    [schema, allSeqs] = await Promise.all([
+      fetch('/api/schema').then(r=>r.json()),
+      fetch('/api/sequences').then(r=>r.json()),
+    ]);
+  }catch(e){ setStatus('failed: '+e, {err:true}); return; }
+  for (const s of allSeqs) (s.nodes||[]).forEach(normalizeNode);
+  if (seqId) seq = allSeqs.find(s => s.id === seqId);
+  if (!seq){
+    seq = { id:'', name:'New sequence', cooldownMs:60000, nodes:[] };
+    allSeqs.push(seq);
+  }
+  $('#seqName').value = seq.name;
+  $('#cooldown').value = seq.cooldownMs ?? 60000;
+  $('#seqName').oninput = e => { seq.name = e.target.value; markDirty(); };
+  $('#cooldown').oninput = e => { seq.cooldownMs = parseInt(e.target.value,10)||0; markDirty(); };
+  setStatus('');
+  renderPalette(); renderTree(); renderClip();
+})();
+
+window.addEventListener('beforeunload', e => {
+  if (dirty){ e.preventDefault(); e.returnValue=''; }
+});
+window.addEventListener('keydown', e => {
+  if ((e.metaKey||e.ctrlKey) && e.key==='s'){ e.preventDefault(); save(); }
+  if ((e.metaKey||e.ctrlKey) && e.key==='d' && selPath){ e.preventDefault(); duplicateSelected(); }
+  if ((e.metaKey||e.ctrlKey) && e.key==='v' && clipboard){ e.preventDefault(); pasteHere(); }
+  if (e.key==='Escape'){ selPath=null; renderTree(); renderInspector(); }
+  if (e.key==='Delete' && selPath && !isEditing(e.target)){ e.preventDefault(); deleteNode(selPath); }
+});
+function isEditing(el){ return el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName); }
+
+function markDirty(){ dirty=true; $('#btnSave').classList.add('dirty'); }
+function clearDirty(){ dirty=false; $('#btnSave').classList.remove('dirty'); }
+
+function setStatus(msg, opts){
+  const el = $('#status');
+  el.classList.remove('err','ok');
+  if (opts?.err) el.classList.add('err');
+  if (opts?.ok)  el.classList.add('ok');
+  el.innerHTML = '';
+  if (opts?.spin){ const s=document.createElement('span'); s.className='spin'; el.appendChild(s); }
+  if (msg) el.appendChild(document.createTextNode(msg));
+}
+
+// ---- Palette ----
+function renderPalette(){
+  const cats = {};
+  for (const b of schema.blocks) (cats[b.category||'Other'] ||= []).push(b);
+  $('#palette').innerHTML = Object.keys(cats).sort().map(cat => `
+    <div class="cat">
+      <div class="lab">${escapeHtml(cat)}</div>
+      ${cats[cat].map(b => `<button data-add="${escapeAttr(b.type)}">${escapeHtml(b.label)}</button>`).join('')}
+    </div>`).join('');
+  $('#palette').querySelectorAll('[data-add]').forEach(b => b.onclick = ()=>addNode(b.dataset.add));
+}
+function blockSchema(t){ return schema.blocks.find(b=>b.type===t); }
+function predicateSchema(t){ return schema.predicates.find(p=>p.type===t); }
+function defaultParams(fields){
+  const p={};
+  for (const f of fields||[]) if (f.default !== undefined){
+    if (f.type==='int') p[f.key]=parseInt(f.default,10);
+    else if (f.type==='bool') p[f.key]=f.default==='true';
+    else p[f.key]=f.default;
+  }
+  return p;
+}
+function newNode(type){
+  const sch=blockSchema(type);
+  const node={type,params:defaultParams(sch.fields),children:{}};
+  if (sch.childSlots) for (const s of sch.childSlots) node.children[s]=[];
+  if (type==='if'){
+    const p0=schema.predicates[0];
+    if (p0) node.params.predicate={type:p0.type,params:defaultParams(p0.fields)};
+  }
+  return node;
+}
+
+// ---- Path utils ----
+function getList(path){
+  let cur=seq.nodes;
+  for (let i=0;i+1<path.length;i+=2) cur=cur[path[i]].children[path[i+1]];
+  return cur;
+}
+function getNode(path){
+  if (!path) return null;
+  const list=getList(path.slice(0,-1));
+  return list[path[path.length-1]];
+}
+function selectPath(p){ selPath=p; renderTree(); renderInspector(); }
+
+// Returns {parent, idx} — where new content should go, defaulting to:
+//   - if a control-flow block is selected: append into its first child slot
+//   - if a leaf is selected: insert *after* it in the same parent
+//   - otherwise: append at root
+function insertionPoint(){
+  if (!selPath) return {parent:[], idx:seq.nodes.length};
+  const node=getNode(selPath);
+  const sch=blockSchema(node.type);
+  if (sch?.childSlots?.length){
+    const slot=sch.childSlots[0];
+    const parent=[...selPath, slot];
+    return {parent, idx:getList(parent).length};
+  }
+  const parent=selPath.slice(0,-1);
+  return {parent, idx:selPath[selPath.length-1]+1};
+}
+
+// ---- Tree edits ----
+function addNode(type){
+  const {parent, idx} = insertionPoint();
+  const list=getList(parent);
+  list.splice(idx, 0, newNode(type));
+  selPath=[...parent, idx];
+  markDirty(); renderTree(); renderInspector();
+}
+function deleteNode(path){
+  const list=getList(path.slice(0,-1));
+  list.splice(path[path.length-1],1);
+  selPath=null; markDirty(); renderTree(); renderInspector();
+}
+function moveNode(path, delta){
+  const list=getList(path.slice(0,-1));
+  const i=path[path.length-1]; const j=i+delta;
+  if (j<0||j>=list.length) return;
+  [list[i],list[j]]=[list[j],list[i]];
+  selPath=[...path.slice(0,-1), j];
+  markDirty(); renderTree(); renderInspector();
+}
+function deepClone(n){ return JSON.parse(JSON.stringify(n)); }
+function copyNode(path){
+  clipboard=deepClone(getNode(path));
+  setStatus('copied — paste with ⌘V', {ok:true});
+  setTimeout(()=>setStatus(''),1500);
+  renderClip();
+}
+function cutNode(path){
+  clipboard=deepClone(getNode(path));
+  deleteNode(path); renderClip();
+}
+function pasteHere(){
+  if (!clipboard) return;
+  const {parent, idx} = insertionPoint();
+  const list=getList(parent);
+  list.splice(idx, 0, deepClone(clipboard));
+  selPath=[...parent, idx];
+  markDirty(); renderTree(); renderInspector();
+}
+function clearClip(){ clipboard=null; renderClip(); }
+function duplicateSelected(){
+  if (!selPath) return;
+  const list=getList(selPath.slice(0,-1));
+  const i=selPath[selPath.length-1];
+  list.splice(i+1,0,deepClone(list[i]));
+  selPath=[...selPath.slice(0,-1), i+1];
+  markDirty(); renderTree(); renderInspector();
+}
+
+function renderClip(){
+  const el=$('#clip');
+  if (!clipboard){ el.hidden=true; return; }
+  el.hidden=false;
+  const lab=clipboard.params?._label;
+  el.innerHTML=`<div class="ttl">Clipboard</div>
+    <div class="desc">${escapeHtml(lab||clipboard.type)}</div>
+    <div class="ty">${escapeHtml(clipboard.type)}</div>
+    <div class="clip-actions">
+      <button onclick="pasteHere()">Paste here</button>
+      <button onclick="clearClip()">Clear</button>
+    </div>`;
+}
+
+// ---- Tree render ----
+function missingRequired(n, sch){
+  if (!sch) return [];
+  return (sch.fields||[]).filter(f => {
+    if (f.key==='predicate') return !n.params[f.key]||!n.params[f.key].type;
+    if (!f.required) return false;
+    const v=n.params[f.key];
+    return v===undefined||v===null||v==='';
+  }).map(f => f.label||f.key);
+}
+
+function renderTree(){
+  $('#tree').innerHTML=renderList(seq.nodes,[]) ||
+    '<div class="empty-tree" data-empty-slot="[]">Empty. Pick a block from the palette, or drop one here.</div>';
+  $('#tree').querySelectorAll('[data-path]').forEach(el => {
+    el.onclick = ev => {
+      if (ev.target.closest('button')) return;
+      ev.stopPropagation();
+      selectPath(JSON.parse(el.dataset.path));
+    };
+    el.ondragstart = ev => onDragStart(el, ev);
+    el.ondragover  = ev => onNodeDragOver(el, ev);
+    el.ondragleave = ev => clearDropFx(el);
+    el.ondrop      = ev => onNodeDrop(el, ev);
+    el.ondragend   = ev => onDragEnd(el, ev);
+  });
+  $('#tree').querySelectorAll('[data-empty-slot]').forEach(el => {
+    el.ondragover  = ev => onSlotDragOver(el, ev);
+    el.ondragleave = ev => el.classList.remove('drop-into');
+    el.ondrop      = ev => onSlotDrop(el, ev);
+  });
+  $('#tree').querySelectorAll('[data-act]').forEach(b => {
+    b.onclick = ev => {
+      ev.stopPropagation();
+      const p=JSON.parse(b.dataset.path); const a=b.dataset.act;
+      if (a==='copy') copyNode(p);
+      if (a==='cut') cutNode(p);
+      if (a==='del') deleteNode(p);
+    };
+  });
+}
+
+// ---- Drag-and-drop ----
+// Cross-slot moves are allowed; the only restriction is that a block can't be
+// dropped onto itself or any of its descendants (would create a cycle).
+let dragSrc = null;     // path of the dragging node
+
+function isAncestor(ancestor, descendant){
+  if (ancestor.length >= descendant.length) return false;
+  for (let i=0;i<ancestor.length;i++) if (ancestor[i] !== descendant[i]) return false;
+  return true;
+}
+function pathsEqual(a,b){ return JSON.stringify(a)===JSON.stringify(b); }
+function clearAllDropFx(){
+  document.querySelectorAll('.drop-above,.drop-below,.drop-into')
+    .forEach(e => e.classList.remove('drop-above','drop-below','drop-into'));
+}
+function clearDropFx(el){ el.classList.remove('drop-above','drop-below','drop-into'); }
+
+function onDragStart(el, ev){
+  dragSrc = JSON.parse(el.dataset.path);
+  el.classList.add('dragging');
+  ev.dataTransfer.effectAllowed = 'move';
+  try { ev.dataTransfer.setData('text/plain', JSON.stringify(dragSrc)); } catch {}
+}
+function onNodeDragOver(el, ev){
+  if (!dragSrc) return;
+  const tgt = JSON.parse(el.dataset.path);
+  // can't drop a block onto itself or one of its own descendants
+  if (pathsEqual(tgt, dragSrc) || isAncestor(dragSrc, tgt)) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  const r = el.getBoundingClientRect();
+  const before = (ev.clientY - r.top) < r.height / 2;
+  el.classList.toggle('drop-above', before);
+  el.classList.toggle('drop-below', !before);
+  ev.dataTransfer.dropEffect = 'move';
+}
+function onNodeDrop(el, ev){
+  if (!dragSrc) return;
+  const tgt = JSON.parse(el.dataset.path);
+  if (pathsEqual(tgt, dragSrc) || isAncestor(dragSrc, tgt)) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  const r = el.getBoundingClientRect();
+  const before = (ev.clientY - r.top) < r.height / 2;
+  moveAcross(dragSrc, tgt.slice(0,-1), tgt[tgt.length-1] + (before ? 0 : 1));
+  clearAllDropFx();
+}
+function onSlotDragOver(el, ev){
+  if (!dragSrc) return;
+  const slotPath = JSON.parse(el.dataset.emptySlot);
+  if (isAncestor(dragSrc, slotPath) || pathsEqual(dragSrc, slotPath)) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  el.classList.add('drop-into');
+  ev.dataTransfer.dropEffect = 'move';
+}
+function onSlotDrop(el, ev){
+  if (!dragSrc) return;
+  const slotPath = JSON.parse(el.dataset.emptySlot);
+  if (isAncestor(dragSrc, slotPath) || pathsEqual(dragSrc, slotPath)) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  moveAcross(dragSrc, slotPath, 0);
+  clearAllDropFx();
+}
+// After splicing index `srcIdx` out of `srcParent`, any other path that goes
+// THROUGH srcParent at the same level with a higher index has shifted down by
+// one. This rewrites a destination parent path so it still points where it
+// did before the source splice.
+function adjustAfterSrcSplice(dstParent, srcParent, srcIdx){
+  if (srcParent.length >= dstParent.length) return dstParent.slice();
+  for (let i=0;i<srcParent.length;i++){
+    if (srcParent[i] !== dstParent[i]) return dstParent.slice();
+  }
+  const out = dstParent.slice();
+  if (out[srcParent.length] > srcIdx) out[srcParent.length]--;
+  return out;
+}
+
+function moveAcross(srcPath, dstParent, dstIdx){
+  const srcParent = srcPath.slice(0,-1);
+  const srcIdx    = srcPath[srcPath.length-1];
+  const sameParent = pathsEqual(srcParent, dstParent);
+
+  if (sameParent){
+    let to = dstIdx;
+    if (to > srcIdx) to--;
+    if (to === srcIdx) return;
+    const list = getList(srcParent);
+    const [moved] = list.splice(srcIdx, 1);
+    list.splice(to, 0, moved);
+    selPath = [...srcParent, to];
+  } else {
+    const fromList = getList(srcParent);
+    const [moved] = fromList.splice(srcIdx, 1);
+    const fixedDstParent = adjustAfterSrcSplice(dstParent, srcParent, srcIdx);
+    const toList = getList(fixedDstParent);
+    toList.splice(dstIdx, 0, moved);
+    selPath = [...fixedDstParent, dstIdx];
+  }
+  markDirty(); renderTree(); renderInspector();
+}
+function onDragEnd(el){
+  el.classList.remove('dragging');
+  clearAllDropFx();
+  dragSrc = null;
+}
+
+function renderList(list, basePath){
+  return (list||[]).map((n,i) => {
+    const path=[...basePath,i];
+    const sch=blockSchema(n.type);
+    const sel=selPath && JSON.stringify(selPath)===JSON.stringify(path);
+    const dis=!!(n.params&&n.params._disabled);
+    const lab=(n.params&&n.params._label)||'';
+    const miss=missingRequired(n,sch);
+    const pathStr=JSON.stringify(path);
+
+    if (n.type==='divider'){
+      return `<div class="node divider${sel?' selected':''}" draggable="true" data-path='${pathStr}'>
+        <div class="body"><span class="label">${escapeHtml((n.params&&n.params.text)||'—')}</span></div>
+        <div class="ctrl">
+          <button data-act="copy" data-path='${pathStr}' title="Copy">⎘</button>
+          <button data-act="cut" data-path='${pathStr}' title="Cut">✂</button>
+          <button data-act="del" data-path='${pathStr}' class="danger" title="Delete">✕</button>
+        </div>
+      </div>`;
+    }
+
+    let slots='';
+    if (sch?.childSlots){
+      slots=sch.childSlots.map(s => {
+        const slotPath=[...path,s];
+        const inner = renderList(n.children[s], slotPath);
+        const emptyDrop = `<div class="empty-tree" data-empty-slot='${JSON.stringify(slotPath)}'>drop a block here, or pick one from the palette</div>`;
+        return `<div class="slot">
+          <div class="slot-label">${escapeHtml(s)}</div>
+          ${inner || emptyDrop}
+        </div>`;
+      }).join('');
+    }
+
+    const cls=['node'];
+    if (sel) cls.push('selected');
+    if (dis) cls.push('disabled');
+    if (miss.length) cls.push('invalid');
+
+    const mult = renderMultiplier(n);
+    const r3   = renderIdentifying(n);
+    const r4parts = [];
+    if (miss.length) r4parts.push(`<span class="miss">missing: ${escapeHtml(miss.join(', '))}</span>`);
+    if (dis)         r4parts.push(`<span class="off">disabled</span>`);
+
+    return `
+      <div class="${cls.join(' ')}" draggable="true" data-path='${pathStr}'>
+        <span class="badge">${i+1}</span>
+        <div class="body">
+          ${lab?`<div class="label">${escapeHtml(lab)}</div>`:''}
+          <div class="row2"><span class="pill">${escapeHtml(n.type)}</span>${mult?`<span class="mult">${escapeHtml(mult)}</span>`:''}</div>
+          ${r3?`<div class="row3">${r3}</div>`:''}
+          ${r4parts.length?`<div class="row4">${r4parts.join('')}</div>`:''}
+        </div>
+        <div class="ctrl">
+          <button data-act="copy" data-path='${pathStr}' title="Copy">⎘</button>
+          <button data-act="cut" data-path='${pathStr}' title="Cut">✂</button>
+          <button data-act="del" data-path='${pathStr}' class="danger" title="Delete">✕</button>
+        </div>
+      </div>
+      ${slots}`;
+  }).join('');
+}
+
+// Row 2 multiplier-style annotation. Currently only repeat uses it.
+function renderMultiplier(n){
+  const p = n.params || {};
+  if (n.type === 'repeat') return '× '+(p.count||1)+(p.interval_ms?` · ${p.interval_ms} ms gap`:'');
+  if (n.type === 'wait')   return (p.ms||0)+' ms';
+  return '';
+}
+
+// Row 3: key params formatted as "key: value · key: value".
+function renderIdentifying(n){
+  const p = n.params || {};
+  const parts = [];
+  const kv = (k, v) => parts.push(`<span><span class="k">${escapeHtml(k)}:</span> <span class="v">${escapeHtml(v)}</span></span>`);
+  if (n.type === 'wol' && p.mac) kv('mac', p.mac);
+  if (n.type === 'wifi-hop'){
+    if (p.ssid) kv('ssid', p.ssid);
+    if (p.static_ip) kv('static', p.static_ip);
+  }
+  if (n.type === 'samsung-key'){
+    if (p.ip)  kv('ip', p.ip);
+    if (p.key) kv('key', p.key);
+  }
+  if (n.type === 'if'){
+    const pred = (p.predicate||{}).type;
+    if (pred) kv('predicate', pred);
+  }
+  return parts.join(' &nbsp;·&nbsp; ');
+}
+
+// ---- Inspector ----
+function renderInspector(){
+  if (!selPath){ $('#inspector').innerHTML='<div class="empty-tree">Select a block to edit.</div>'; return; }
+  const node=getNode(selPath);
+  const sch=blockSchema(node.type);
+  const disabled=!!(node.params&&node.params._disabled);
+  let html=`<div class="insp-head">
+      <span class="ty">${escapeHtml(node.type)}</span>
+      <label class="toggle"><input type="checkbox" id="p__disabled" ${disabled?'checked':''}/> disabled</label>
+    </div>`;
+  html+=`<div class="field field-label-text">
+    <label>Label <span style="color:var(--fg-3);font-weight:400;font-size:11px;letter-spacing:0;text-transform:none">your annotation</span></label>
+    <input id="p__label" placeholder="What does this step do?" value="${escapeAttr((node.params&&node.params._label)||'')}" />
+  </div>`;
+  html+=(sch?.fields||[]).map(f => fieldHtml(f, node.params[f.key], 'p_'+f.key)).join('');
+  $('#inspector').innerHTML=html;
+  attachLabelField(node); attachDisableField(node);
+  for (const f of sch?.fields||[]) attachField(node, f, 'p_'+f.key);
+}
+
+function fieldHtml(f, val, id){
+  const miss = f.required && (val===undefined||val===null||val==='');
+  const cls = miss?'missing':'';
+  const reqMark = f.required?'<span class="req" title="required">*</span>':'';
+  const label = `<label>${escapeHtml(f.label||f.key)}${reqMark}</label>`;
+  if (f.type==='enum'){
+    const opts=(f.enum||'').split(',').map(o=>`<option ${val===o?'selected':''}>${escapeHtml(o)}</option>`).join('');
+    return `<div class="field">${label}<select id="${id}" class="${cls}">${opts}</select></div>`;
+  }
+  if (f.type==='bool')
+    return `<div class="field"><label><input type="checkbox" id="${id}" ${val?'checked':''}/> ${escapeHtml(f.label)}${reqMark}</label></div>`;
+  if (f.type==='stringList')
+    return `<div class="field">${label}<textarea id="${id}" class="${cls}" placeholder="comma-separated">${escapeHtml(val||'')}</textarea></div>`;
+  if (f.type==='int')
+    return `<div class="field">${label}<input id="${id}" class="${cls}" type="number" value="${val??''}"/></div>`;
+  if (f.type==='mac')
+    return `<div class="field">${label}<input id="${id}" class="${cls}" placeholder="AA:BB:CC:DD:EE:FF" value="${escapeAttr(val||'')}"/></div>`;
+  if (f.type==='predicateRef'){
+    const cur=val||{type:'',params:{}};
+    const opts=schema.predicates.map(p=>`<option value="${escapeAttr(p.type)}" ${cur.type===p.type?'selected':''}>${escapeHtml(p.label)}</option>`).join('');
+    const sub=predicateSchema(cur.type);
+    const subFields = sub ? (sub.fields||[]).map(sf => fieldHtml(sf, (cur.params||{})[sf.key], id+'_'+sf.key)).join('') : '';
+    return `<div class="field">${label}<select id="${id}_type">${opts}</select><div style="margin-top:10px">${subFields}</div></div>`;
+  }
+  return `<div class="field">${label}<input id="${id}" class="${cls}" value="${escapeAttr(val||'')}"/></div>`;
+}
+
+function attachLabelField(node){
+  document.getElementById('p__label').oninput = e => { node.params._label=e.target.value; markDirty(); renderTree(); };
+}
+function attachDisableField(node){
+  document.getElementById('p__disabled').onchange = e => {
+    if (e.target.checked) node.params._disabled=true; else delete node.params._disabled;
+    markDirty(); renderTree();
+  };
+}
+function attachField(node, f, id){
+  if (f.type==='predicateRef'){
+    const sel=document.getElementById(id+'_type');
+    sel.onchange = e => {
+      const sub=predicateSchema(e.target.value);
+      node.params[f.key]={type:e.target.value, params:defaultParams(sub.fields||[])};
+      markDirty(); renderInspector(); renderTree();
+    };
+    const sub=predicateSchema((node.params[f.key]||{}).type);
+    if (sub) for (const sf of sub.fields||[]){
+      const el=document.getElementById(id+'_'+sf.key);
+      if (!el) continue;
+      el.oninput = e => {
+        node.params[f.key].params[sf.key] = sf.type==='int'?parseInt(e.target.value,10):e.target.value;
+        markDirty();
+      };
+    }
+    return;
+  }
+  const el=document.getElementById(id);
+  if (!el) return;
+  el.oninput = e => {
+    let v=e.target.value;
+    if (f.type==='int') v=parseInt(v,10);
+    if (f.type==='bool') v=e.target.checked;
+    node.params[f.key]=v;
+    el.classList.toggle('missing', f.required && (v===''||v===null||v===undefined||(f.type==='int'&&isNaN(v))));
+    markDirty();
+    if (['ssid','count','mac','key','interval_ms','ms','text','ip'].includes(f.key)) renderTree();
+  };
+}
+
+// ---- Save / run ----
+async function save(){
+  if (!seq.name) seq.name='untitled';
+  if (!allSeqs.includes(seq)) allSeqs.push(seq);
+  $('#btnSave').disabled=true;
+  setStatus('saving…', {spin:true});
+  try{
+    const r=await fetch('/api/sequences',{
+      method:'PUT', headers:{'content-type':'application/json'},
+      body:JSON.stringify(allSeqs),
+    });
+    if (!r.ok){ setStatus('save failed: '+r.status,{err:true}); return; }
+    const updated=await r.json();
+    if (!seq.id){
+      const m=updated.find(s=>s.name===seq.name && s.nodes.length===seq.nodes.length);
+      if (m) seq.id=m.id;
+    }
+    clearDirty();
+    setStatus('saved', {ok:true});
+    setTimeout(()=>setStatus(''),1500);
+    if (seq.id && !location.search.includes(seq.id))
+      history.replaceState(null,'','/edit?id='+seq.id);
+  }catch(e){ setStatus('save failed: '+e,{err:true}); }
+  finally{ $('#btnSave').disabled=false; }
+}
+
+async function testRun(){
+  if (dirty || !seq.id) await save();
+  if (!seq.id) return;
+  $('#btnTest').disabled=true;
+  setStatus('dispatching…', {spin:true});
+  try{
+    const r=await fetch('/api/run?id='+encodeURIComponent(seq.id),{method:'POST'});
+    if (!r.ok){ setStatus('run rejected: '+r.status,{err:true}); $('#btnTest').disabled=false; return; }
+    setStatus('running…', {spin:true});
+    await poll();
+  }catch(e){ setStatus('run failed: '+e,{err:true}); }
+  finally{ $('#btnTest').disabled=false; }
+}
+async function poll(){
+  for (let i=0;i<240;i++){
+    await new Promise(r=>setTimeout(r,500));
+    let s; try{ s=await fetch('/api/status').then(r=>r.json()); }catch{continue;}
+    if (s.running){ setStatus('running…', {spin:true}); continue; }
+    if (s.lastError){ setStatus('error: '+s.lastError,{err:true}); }
+    else { setStatus('done',{ok:true}); setTimeout(()=>setStatus(''),2400); }
+    return;
+  }
+  setStatus('still running (poll timed out)');
+}
+
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+</script>

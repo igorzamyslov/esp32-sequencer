@@ -2,6 +2,8 @@
 #include <Preferences.h>
 
 namespace {
+    // NVS namespace kept as-is to avoid wiping existing devices' saved creds
+    // when the project was renamed.
     constexpr const char* NS = "esp32tv";
     Preferences& prefs() {
         static Preferences p;
@@ -11,36 +13,20 @@ namespace {
 
 Config Config::load() {
     Config c;
-    prefs().begin(NS, true); // read-only
-    c.tplinkSsid    = prefs().getString("tpSsid", "");
-    c.tplinkPass    = prefs().getString("tpPass", "");
-    c.tplinkStaticIp= prefs().getString("tpIp", "");
-    c.tplinkGateway = prefs().getString("tpGw", "");
-    c.fritzboxSsid  = prefs().getString("fbSsid", "");
-    c.fritzboxPass  = prefs().getString("fbPass", "");
-    c.pcMac         = prefs().getString("pcMac", "");
-    c.tvIp          = prefs().getString("tvIp", "");
-    c.tvMac         = prefs().getString("tvMac", "");
+    prefs().begin(NS, true);
+    c.idleSsid      = prefs().getString("idleSsid", "");
+    c.idlePass      = prefs().getString("idlePass", "");
     c.tvToken       = prefs().getString("tvTok", "");
-    c.dualsenseMac  = prefs().getString("dsMac", "");
     c.setupFallback = prefs().getBool("sFb", false);
     prefs().end();
     return c;
 }
 
 void Config::save() const {
-    prefs().begin(NS, false); // read-write
-    prefs().putString("tpSsid", tplinkSsid);
-    prefs().putString("tpPass", tplinkPass);
-    prefs().putString("tpIp", tplinkStaticIp);
-    prefs().putString("tpGw", tplinkGateway);
-    prefs().putString("fbSsid", fritzboxSsid);
-    prefs().putString("fbPass", fritzboxPass);
-    prefs().putString("pcMac", pcMac);
-    prefs().putString("tvIp", tvIp);
-    prefs().putString("tvMac", tvMac);
+    prefs().begin(NS, false);
+    prefs().putString("idleSsid", idleSsid);
+    prefs().putString("idlePass", idlePass);
     prefs().putString("tvTok", tvToken);
-    prefs().putString("dsMac", dualsenseMac);
     prefs().putBool("sFb", setupFallback);
     prefs().end();
 }

@@ -36,8 +36,11 @@ void BleScanner::begin() {
     auto* scan = NimBLEDevice::getScan();
     scan->setScanCallbacks(&s_cb, false);
     scan->setActiveScan(false);   // passive — don't probe
-    scan->setInterval(100);       // ms
-    scan->setWindow(50);          // ms
+    // 20% duty cycle to leave WiFi airtime free on the single-radio C3.
+    // DualSense advertises at ~30ms so a 80ms scan window inside a 400ms
+    // interval still catches it within ~1s of power-on.
+    scan->setInterval(400);       // ms
+    scan->setWindow(80);          // ms
 }
 
 void BleScanner::start(uint32_t duration_ms) {

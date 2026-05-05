@@ -1,37 +1,24 @@
 #pragma once
 #include <Arduino.h>
 
+// Bootstrap-only: credentials for the idle WiFi network (where the ESP idles
+// and serves the web UI) plus the runtime-managed Samsung pairing token.
+// Per-device parameters and *other* WiFi networks live as block params in
+// sequences.json.
 struct Config {
-    String tplinkSsid;
-    String tplinkPass;
-    String tplinkStaticIp; // optional; empty = DHCP. Required when PC's ICS isn't up yet.
-    String tplinkGateway;  // optional; only used when tplinkStaticIp is set. Mask is /24.
-    String fritzboxSsid;
-    String fritzboxPass;
-    String pcMac;          // "AA:BB:CC:DD:EE:FF"
-    String tvIp;           // "192.168.178.42"
-    String tvMac;
-    String tvToken;        // empty until pairing succeeds
-    String dualsenseMac;
-    bool setupFallback = false; // if true, SoftAP setup mode auto-starts after persistent wifi failure
+    String idleSsid;
+    String idlePass;
+    String tvToken;        // runtime-managed Samsung Tizen pairing token
+    bool setupFallback = false; // SoftAP setup mode auto-starts after persistent wifi failure
 
     static Config load();
     void save() const;
     static void clear();
 
-    // One-shot flag that survives reboot and forces the next boot into setup mode
-    // even when the stored config is complete.
     static void requestSetupOnNextBoot();
     static bool consumeSetupRequest();
 
-    // Has every value needed to enter runtime mode.
     bool hasAll() const {
-        return tplinkSsid.length() && tplinkPass.length()
-            && fritzboxSsid.length() && fritzboxPass.length()
-            && pcMac.length()
-            && tvIp.length() && tvMac.length()
-            && dualsenseMac.length();
-        // tvToken is allowed to be empty; the first runtime sequence will
-        // attempt to pair, but the user generally pairs explicitly during setup.
+        return idleSsid.length() && idlePass.length();
     }
 };

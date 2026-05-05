@@ -2,7 +2,10 @@
 .pio/
 .vscode/
 .DS_Store
+.cache/
+compile_commands.json
 src/secrets.h
+src/web/web_assets.h
 *.bin
 *.elf
 CLAUDE.md

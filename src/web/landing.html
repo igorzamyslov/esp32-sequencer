@@ -1,0 +1,190 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>esp32-sequencer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+  --bg:#0E1A20; --bg-2:#15242C; --bg-3:#1F313A;
+  --fg:#D8DEE9; --fg-2:#A7ADBA; --fg-3:#65737E;
+  --rule:#2C3D47; --rule-2:#1B2B34;
+  --accent:#6699CC; --accent-2:#62B3B2;
+  --warn:#F99157; --danger:#EC5F67; --ok:#99C794; --yellow:#FAC863; --purple:#C594C5;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);
+  font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:40px 24px 80px}
+header{display:flex;align-items:baseline;justify-content:space-between;
+  padding-bottom:14px;border-bottom:1px solid var(--rule);margin-bottom:32px}
+header h1{font:600 22px/1.2 var(--sans);letter-spacing:-0.01em;margin:0}
+header .host{font:12px/1 var(--mono);color:var(--accent-2)}
+section{margin:0 0 36px}
+section > h2{font:600 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.12em;
+  color:var(--fg-3);margin:0 0 12px;display:flex;align-items:center;gap:10px}
+section > h2::after{content:"";flex:1;border-top:1px solid var(--rule)}
+
+.row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;
+  padding:12px 14px;margin:5px 0;
+  background:var(--bg);border:1px solid var(--rule);border-radius:6px}
+.row:hover{border-color:var(--fg-3);background:var(--bg-3)}
+.row .badge{
+  width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;
+  font:11px/1 var(--mono);color:var(--accent-2);
+  border:1px solid var(--rule);border-radius:50%;background:var(--bg-2);flex-shrink:0;
+}
+.row .body{min-width:0}
+.row .name{font:600 15px/1.3 var(--sans);color:var(--fg);overflow:hidden;text-overflow:ellipsis}
+.row .name.mono{font-family:var(--mono);font-size:13px;color:var(--accent-2);font-weight:500}
+.row .meta{font:12px/1.4 var(--mono);color:var(--fg-2);margin-top:3px}
+.row .meta .sep{color:var(--fg-3);margin:0 6px}
+.row .meta .broken{color:var(--danger);font-weight:600}
+.row .actions{display:flex;gap:6px}
+.empty{padding:24px;text-align:center;color:var(--fg-3);
+  border:1px dashed var(--rule);border-radius:6px;font-size:13px}
+
+button,a.btn{font:13px/1 var(--sans);font-weight:500;padding:7px 12px;border-radius:6px;
+  background:var(--bg);border:1px solid var(--rule);color:var(--fg);text-decoration:none;cursor:pointer;
+  transition:background .12s,border-color .12s,color .12s}
+button:hover,a.btn:hover{background:var(--bg-2);border-color:var(--fg-3)}
+button.run{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+button.run:hover{background:#7faedb;border-color:#7faedb}
+button.danger{border-color:var(--danger);color:var(--danger)}
+button.danger:hover{background:var(--danger);color:var(--bg);border-color:var(--danger)}
+
+.actions-row{margin-top:14px;display:flex;gap:8px;align-items:center}
+.actions-row .sp{flex:1}
+#status{margin-top:14px;padding:10px 12px;font:12px/1.4 var(--mono);color:var(--fg-2);
+  background:var(--bg-2);border-left:2px solid var(--accent-2);min-height:14px;border-radius:0 4px 4px 0;
+  overflow-wrap:anywhere}
+#status:empty::before{content:"// idle";color:var(--fg-3)}
+#status.err{border-left-color:var(--danger);color:var(--danger)}
+#status.ok{border-left-color:var(--ok);color:var(--ok)}
+
+footer{margin-top:48px;padding-top:14px;border-top:1px solid var(--rule);
+  font:11px/1.4 var(--mono);color:var(--fg-3);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+footer a{color:var(--accent-2);text-decoration:none}
+footer a:hover{color:var(--accent);text-decoration:underline}
+::selection{background:var(--accent);color:var(--bg)}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>esp32-sequencer</h1>
+    <span class="host" id="host">—</span>
+  </header>
+
+  <section>
+    <h2>Sequences</h2>
+    <div id="seqs"></div>
+    <div class="actions-row">
+      <span class="sp"></span>
+      <a class="btn" href="/edit">+ new sequence</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Triggers</h2>
+    <div id="trigs"></div>
+    <div class="actions-row">
+      <span class="sp"></span>
+      <a class="btn" href="/triggers">manage triggers</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>System</h2>
+    <div class="actions-row">
+      <a class="btn" href="/settings">Settings</a>
+      <button onclick="post('/setup','Reboot into setup AP?')">Setup mode</button>
+      <span class="sp"></span>
+      <button class="danger" onclick="post('/reset','Wipe wifi creds + tv token?')">Wipe credentials</button>
+    </div>
+    <div id="status"></div>
+  </section>
+
+  <footer>
+    <span>esp32-sequencer · sequence builder</span>
+    <span><a href="/api/sequences" target="_blank">api</a> · <a href="/edit">edit</a> · <a href="/triggers">triggers</a> · <a href="/settings">settings</a></span>
+  </footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+async function post(p, msg){
+  if (msg && !confirm(msg)) return;
+  const s=$('#status'); s.classList.remove('ok','err');
+  s.textContent = '> '+p+' …';
+  try{
+    const r=await fetch(p,{method:'POST'});
+    s.classList.add(r.ok?'ok':'err');
+    s.textContent = '> '+p+' → '+r.status+' '+await r.text();
+  }catch(e){ s.classList.add('err'); s.textContent='> '+p+' failed: '+e; }
+}
+async function run(id){
+  const s=$('#status'); s.classList.remove('ok','err');
+  s.textContent='> dispatching '+id+' …';
+  try{
+    const r=await fetch('/api/run?id='+encodeURIComponent(id),{method:'POST'});
+    s.classList.add(r.ok?'ok':'err');
+    s.textContent='> '+id+' → '+r.status+' '+await r.text();
+  }catch(e){ s.classList.add('err'); s.textContent='> '+id+' failed: '+e; }
+}
+async function load(){
+  $('#host').textContent = location.host;
+  let seqs=[], trigs=[];
+  try{
+    [seqs, trigs] = await Promise.all([
+      fetch('/api/sequences').then(r=>r.json()),
+      fetch('/api/triggers').then(r=>r.json()),
+    ]);
+  }catch(e){ $('#status').classList.add('err'); $('#status').textContent='> api unreachable: '+e; return; }
+
+  $('#seqs').innerHTML = seqs.length ? seqs.map((s,i) => `
+    <div class="row">
+      <div class="badge">${(i+1).toString().padStart(2,'0')}</div>
+      <div class="body">
+        <div class="name">${esc(s.name||s.id||'untitled')}</div>
+        <div class="meta">
+          ${s.broken?'<span class="broken">⚠ broken</span><span class="sep">·</span>':''}
+          ${s.nodes.length} step${s.nodes.length===1?'':'s'}
+          <span class="sep">·</span>
+          <span style="color:var(--fg-3)">${esc(s.id)}</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="run" onclick="run('${attr(s.id)}')">▸ run</button>
+        <a class="btn" href="/edit?id=${encodeURIComponent(s.id)}">edit</a>
+      </div>
+    </div>`).join('') : '<div class="empty">No sequences yet. <a href="/edit" style="color:var(--accent)">Create one ›</a></div>';
+
+  const seqName = id => (seqs.find(s=>s.id===id)||{}).name || id || '—';
+  const trigSummary = t => {
+    const p = t.params || {};
+    if (t.type === 'http-route') return p.path || '(no path)';
+    if (t.type === 'ble-mac')    return p.mac  || '(no mac)';
+    return '';
+  };
+  $('#trigs').innerHTML = trigs.length ? trigs.map((t,i) => {
+    const summary = trigSummary(t);
+    return `
+    <div class="row">
+      <div class="badge">${(i+1).toString().padStart(2,'0')}</div>
+      <div class="body">
+        <div class="name mono">${esc(t.type)}${summary?` <span style="color:var(--fg-2)">· ${esc(summary)}</span>`:''}</div>
+        <div class="meta">
+          → ${esc(seqName(t.sequenceId))}
+          <span class="sep">·</span>
+          ${t.enabled?'<span style="color:var(--ok)">enabled</span>':'<span style="color:var(--fg-3)">disabled</span>'}
+        </div>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">No triggers bound.</div>';
+}
+function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function attr(s){ return esc(s).replace(/'/g,"\\'"); }
+load();
+</script>
