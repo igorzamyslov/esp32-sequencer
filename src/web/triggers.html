@@ -36,13 +36,18 @@ button.danger:hover{border-color:var(--danger);color:var(--danger);background:va
   border-bottom:1px solid var(--rule);padding:8px 14px}
 .row{background:var(--bg);border:1px solid var(--rule);border-radius:6px;margin:6px 0}
 .row:hover{border-color:var(--fg-3)}
-.row select,.row input{
+.row select,.row input[type=text],.row input[type=number]{
   width:100%;padding:7px 9px;font:13px/1.3 var(--mono);
   background:var(--bg-2);border:1px solid var(--rule);border-radius:5px;color:var(--fg);
 }
 .row select:focus,.row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .row .params{display:flex;flex-direction:column;gap:4px}
 .row label.tog{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--fg-2);justify-content:center}
+.row .args{grid-column:1/-1;border-top:1px solid var(--rule-2);padding-top:8px;margin-top:2px;display:flex;flex-wrap:wrap;gap:8px}
+.row .args h4{width:100%;margin:0 0 4px;font:600 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.1em;color:var(--fg-3)}
+.row .args .field{display:flex;flex-direction:column;gap:4px;min-width:140px;flex:1}
+.row .args .field label{font:12px/1 var(--sans);color:var(--fg-2)}
+.row .args .field input[type=checkbox]{width:auto;margin:4px 0}
 .row label.tog input{width:auto}
 .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;align-items:center}
 #status{margin-right:auto;font:12px/1 var(--mono);color:var(--fg-2);display:flex;align-items:center;gap:8px}
@@ -100,6 +105,7 @@ setStatus('loading…', {spin:true});
       fetch('/api/triggers').then(r=>r.json()),
     ]);
   }catch(e){ setStatus('failed: '+e, {err:true}); return; }
+  trigs.forEach(t => { t.args = t.args || {}; });
   setStatus('');
   render();
 })();
@@ -118,8 +124,63 @@ function defaultParams(fields){
 }
 function addRow(){
   const t0=schema.triggers[0];
-  trigs.push({id:'',type:t0.type,sequenceId:(seqs[0]||{}).id||'',params:defaultParams(t0.fields),enabled:true});
+  trigs.push({id:'',type:t0.type,sequenceId:(seqs[0]||{}).id||'',params:defaultParams(t0.fields),args:{},enabled:true});
   markDirty(); render();
+}
+function renderBindingArgs(binding, allSeqs){
+  const wrap=document.createElement('div');
+  wrap.className='args';
+  const seq=allSeqs.find(s=>s.id===binding.sequenceId);
+  if (!seq||!seq.params||!seq.params.length) return wrap;
+  const title=document.createElement('h4');
+  title.textContent='Arguments';
+  wrap.appendChild(title);
+  binding.args=binding.args||{};
+  for (const p of seq.params){
+    if (!(p.key in binding.args)){
+      binding.args[p.key]=Array.isArray(p.default)?p.default.slice():(p.default??'');
+    }
+    const row=document.createElement('div');
+    row.className='field';
+    const lbl=document.createElement('label');
+    lbl.textContent=p.label||p.key;
+    row.appendChild(lbl);
+    if (p.type==='bool'){
+      const i=document.createElement('input');
+      i.type='checkbox';
+      i.checked=!!binding.args[p.key];
+      i.onchange=()=>{binding.args[p.key]=i.checked;markDirty();};
+      row.appendChild(i);
+    } else if (p.type==='int'){
+      const i=document.createElement('input');
+      i.type='number';
+      i.value=binding.args[p.key];
+      i.oninput=()=>{binding.args[p.key]=parseInt(i.value,10)||0;markDirty();};
+      row.appendChild(i);
+    } else if (p.type==='enum'){
+      const s=document.createElement('select');
+      for (const v of (p.enumValues||'').split(',')){
+        const o=document.createElement('option');
+        o.value=v;o.textContent=v;
+        if (v===binding.args[p.key]) o.selected=true;
+        s.appendChild(o);
+      }
+      s.onchange=()=>{binding.args[p.key]=s.value;markDirty();};
+      row.appendChild(s);
+    } else {
+      const i=document.createElement('input');
+      i.type='text';
+      const cur=binding.args[p.key];
+      i.value=Array.isArray(cur)?cur.join(','):cur;
+      i.oninput=()=>{
+        binding.args[p.key]=(p.type==='stringlist')?i.value.split(',').map(x=>x.trim()):i.value;
+        markDirty();
+      };
+      row.appendChild(i);
+    }
+    wrap.appendChild(row);
+  }
+  return wrap;
 }
 function changeType(i, type){
   const sch=schema.triggers.find(x=>x.type===type);
@@ -135,7 +196,7 @@ function render(){
     const paramFields=(sch.fields||[]).map(f =>
       `<input placeholder="${esc(f.label)}" data-i="${i}" data-k="${esc(f.key)}" data-t="${f.type}" value="${esc((t.params||{})[f.key]??'')}" />`
     ).join('');
-    return `<div class="row">
+    return `<div class="row" data-row="${i}">
       <select data-typ="${i}">${typeOpts}</select>
       <div class="params">${paramFields}</div>
       <select data-seq="${i}">${seqOpts}</select>
@@ -146,7 +207,10 @@ function render(){
   }).join('') : '<div class="empty">No triggers. Click <strong>add trigger</strong>.</div>';
 
   document.querySelectorAll('[data-typ]').forEach(el => el.onchange = e => changeType(+el.dataset.typ, e.target.value));
-  document.querySelectorAll('[data-seq]').forEach(el => el.onchange = e => { trigs[+el.dataset.seq].sequenceId=e.target.value; markDirty(); });
+  document.querySelectorAll('[data-seq]').forEach(el => el.onchange = e => {
+    const i=+el.dataset.seq; trigs[i].sequenceId=e.target.value; trigs[i].args={};
+    markDirty(); render();
+  });
   document.querySelectorAll('[data-en]').forEach(el => el.onchange = e => { trigs[+el.dataset.en].enabled=e.target.checked; markDirty(); });
   document.querySelectorAll('[data-rm]').forEach(el => el.onclick = () => { trigs.splice(+el.dataset.rm,1); markDirty(); render(); });
   document.querySelectorAll('[data-run]').forEach(el => el.onclick = () => run(+el.dataset.run));
@@ -154,6 +218,10 @@ function render(){
     const v = el.dataset.t==='int' ? parseInt(e.target.value,10) : e.target.value;
     trigs[+el.dataset.i].params[el.dataset.k] = v;
     markDirty();
+  });
+  document.querySelectorAll('.row[data-row]').forEach(el => {
+    const i=+el.dataset.row;
+    el.appendChild(renderBindingArgs(trigs[i], seqs));
   });
 }
 
@@ -172,6 +240,7 @@ async function save(){
     const r=await fetch('/api/triggers',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(trigs)});
     if (!r.ok){ setStatus('save failed: '+r.status,{err:true}); return; }
     trigs=await r.json();
+    trigs.forEach(t => { t.args = t.args || {}; });
     clearDirty();
     setStatus('saved',{ok:true});
     setTimeout(()=>setStatus(''),1500);
