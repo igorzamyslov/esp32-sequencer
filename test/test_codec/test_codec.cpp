@@ -126,6 +126,8 @@ void test_encode_sequence_with_params_round_trip() {
     TEST_ASSERT_EQUAL(1, (int)out[0].params.size());
     TEST_ASSERT_EQUAL_STRING("n", out[0].params[0].key.c_str());
     TEST_ASSERT_EQUAL(7, out[0].params[0].defaultValue.as<int>());
+    TEST_ASSERT_EQUAL((int)FieldType::Int, (int)out[0].params[0].type);
+    TEST_ASSERT_FALSE(out[0].params[0].required);
 }
 
 void test_decode_trigger_with_args() {

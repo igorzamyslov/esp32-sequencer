@@ -1,6 +1,7 @@
 #include "SequenceCodec.h"
 #include "Registry.h"
 #include <ArduinoJson.h>
+#include <cstring>
 
 namespace seqb {
 
@@ -13,14 +14,13 @@ void copyJson(JsonDocument& dst, JsonVariantConst src) {
 
 FieldType parseFieldType(const char* s) {
     if (!s) return FieldType::String;
-    std::string t = s;
-    if (t == "bool") return FieldType::Bool;
-    if (t == "int") return FieldType::Int;
-    if (t == "string") return FieldType::String;
-    if (t == "stringlist") return FieldType::StringList;
-    if (t == "mac") return FieldType::MacAddress;
-    if (t == "enum") return FieldType::Enum;
-    if (t == "predicate") return FieldType::PredicateRef;
+    if (strcmp(s, "bool") == 0) return FieldType::Bool;
+    if (strcmp(s, "int") == 0) return FieldType::Int;
+    if (strcmp(s, "string") == 0) return FieldType::String;
+    if (strcmp(s, "stringlist") == 0) return FieldType::StringList;
+    if (strcmp(s, "mac") == 0) return FieldType::MacAddress;
+    if (strcmp(s, "enum") == 0) return FieldType::Enum;
+    if (strcmp(s, "predicate") == 0) return FieldType::PredicateRef;
     return FieldType::String;
 }
 
@@ -176,10 +176,7 @@ std::string SequenceCodec::encodeTriggers(const std::vector<TriggerBinding>& ts)
         o["sequenceId"] = t.sequenceId;
         o["enabled"] = t.enabled;
         o["params"].set(t.params.as<JsonVariantConst>());
-        if (!t.args.isNull())
-            o["args"].set(t.args.as<JsonVariantConst>());
-        else
-            o["args"].to<JsonObject>();
+        if (!t.args.isNull()) o["args"].set(t.args.as<JsonVariantConst>());
     }
     std::string out;
     serializeJson(doc, out);
