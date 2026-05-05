@@ -266,6 +266,10 @@ main{display:grid;grid-template-columns:240px 1fr 360px;flex:1;min-height:0}
 #paramsTable input:disabled,#paramsTable select:disabled{opacity:.35;cursor:not-allowed}
 #paramsTable tbody tr:first-child td{padding-top:8px}
 
+/* --- Fx toggle --- */
+.fx-toggle { margin-left: 6px; padding: 0 6px; font-size: 11px; }
+.fx-toggle.on { background: var(--accent); color: var(--bg); }
+
 /* --- Misc --- */
 ::selection{background:var(--accent);color:var(--bg)}
 input[type=number]{appearance:textfield;-moz-appearance:textfield}
@@ -832,12 +836,162 @@ function renderIdentifying(n){
   return parts.join(' &nbsp;·&nbsp; ');
 }
 
+// ---- Fx toggle helpers ----
+function fieldIsString(t){ return t==='string'||t==='stringlist'||t==='mac'; }
+
+function paramOptionsForType(t){
+  return (seq.params || []).filter(p => p.type === t).map(p => p.key);
+}
+
+function isParamRef(v){
+  return v && typeof v === 'object' && !Array.isArray(v) && '$param' in v;
+}
+
+function defaultLiteralForType(t){
+  if (t === 'int') return 0;
+  if (t === 'bool') return false;
+  if (t === 'stringlist') return [];
+  return '';
+}
+
+function renderParamSelect(currentName, type, onPick){
+  const s = document.createElement('select');
+  const empty = document.createElement('option');
+  empty.value = ''; empty.textContent = '-- pick parameter --';
+  s.appendChild(empty);
+  for (const k of paramOptionsForType(type)){
+    const o = document.createElement('option');
+    o.value = k; o.textContent = k;
+    if (k === currentName) o.selected = true;
+    s.appendChild(o);
+  }
+  s.onchange = () => onPick(s.value);
+  return s;
+}
+
+// Builds a DOM literal input for a non-string field and wires it to node.params.
+function renderLiteralInput(node, field){
+  const f = field;
+  const val = node.params[f.key];
+  if (f.type === 'int'){
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.value = (typeof val === 'number') ? val : (val ?? '');
+    const miss = f.required && (val === undefined || val === null || val === '');
+    if (miss) inp.classList.add('missing');
+    inp.oninput = () => {
+      const v = parseInt(inp.value, 10);
+      node.params[f.key] = isNaN(v) ? 0 : v;
+      inp.classList.toggle('missing', f.required && (inp.value === '' || isNaN(v)));
+      markDirty();
+    };
+    return inp;
+  }
+  if (f.type === 'bool'){
+    const lbl = document.createElement('label');
+    const inp = document.createElement('input');
+    inp.type = 'checkbox';
+    inp.checked = !!val;
+    inp.onchange = () => { node.params[f.key] = inp.checked; markDirty(); };
+    lbl.appendChild(inp);
+    lbl.appendChild(document.createTextNode(' ' + (f.label || f.key)));
+    return lbl;
+  }
+  if (f.type === 'enum'){
+    const sel = document.createElement('select');
+    if (f.required) sel.classList.toggle('missing', val === undefined || val === null || val === '');
+    for (const o of (f.enum || '').split(',')){
+      const opt = document.createElement('option');
+      opt.value = o; opt.textContent = o;
+      if (o === val) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    sel.onchange = () => {
+      node.params[f.key] = sel.value;
+      if (f.required) sel.classList.toggle('missing', sel.value === '');
+      markDirty();
+    };
+    return sel;
+  }
+  // Fallback for any other non-string type: plain text input
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = val ?? '';
+  inp.oninput = () => { node.params[f.key] = inp.value; markDirty(); };
+  return inp;
+}
+
+function renderFieldWithFx(node, field, renderLit){
+  if (fieldIsString(field.type)){
+    return null; // handled by string path
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'field';
+  const labelRow = document.createElement('label');
+  labelRow.textContent = field.label || field.key;
+  if (field.required){
+    const req = document.createElement('span');
+    req.className = 'req'; req.title = 'required'; req.textContent = '*';
+    labelRow.appendChild(req);
+  }
+
+  const fxBtn = document.createElement('button');
+  fxBtn.type = 'button';
+  fxBtn.className = 'fx-toggle ghost';
+  fxBtn.textContent = 'fx';
+  fxBtn.title = 'Use a parameter';
+  if (isParamRef(node.params[field.key])) fxBtn.classList.add('on');
+  labelRow.appendChild(fxBtn);
+  wrap.appendChild(labelRow);
+
+  const slot = document.createElement('div');
+  function rerender(){
+    slot.innerHTML = '';
+    const v = node.params[field.key];
+    if (isParamRef(v)){
+      slot.appendChild(renderParamSelect(v.$param, field.type, name => {
+        if (!name){
+          node.params[field.key] = defaultLiteralForType(field.type);
+          fxBtn.classList.remove('on');
+          markDirty();
+          rerender();
+        } else {
+          node.params[field.key] = {'$param': name};
+          markDirty();
+        }
+      }));
+    } else {
+      const lit = renderLit(node, field);
+      if (lit instanceof Node) slot.appendChild(lit);
+    }
+  }
+  fxBtn.onclick = (e) => {
+    e.preventDefault();
+    const isFx = isParamRef(node.params[field.key]);
+    if (isFx){
+      node.params[field.key] = defaultLiteralForType(field.type);
+      fxBtn.classList.remove('on');
+    } else {
+      node.params[field.key] = {'$param': ''};
+      fxBtn.classList.add('on');
+    }
+    markDirty();
+    rerender();
+  };
+  rerender();
+  wrap.appendChild(slot);
+  return wrap;
+}
+
 // ---- Inspector ----
 function renderInspector(){
   if (!selPath){ $('#inspector').innerHTML='<div class="empty-tree">Select a block to edit.</div>'; return; }
   const node=getNode(selPath);
   const sch=blockSchema(node.type);
   const disabled=!!(node.params&&node.params._disabled);
+
+  // Build the fixed header (insp-head + label field) as HTML, then switch to DOM.
   let html=`<div class="insp-head">
       <span class="ty">${escapeHtml(node.type)}</span>
       <label class="toggle"><input type="checkbox" id="p__disabled" ${disabled?'checked':''}/> disabled</label>
@@ -846,10 +1000,22 @@ function renderInspector(){
     <label>Label <span style="color:var(--fg-3);font-weight:400;font-size:11px;letter-spacing:0;text-transform:none">your annotation</span></label>
     <input id="p__label" placeholder="What does this step do?" value="${escapeAttr((node.params&&node.params._label)||'')}" />
   </div>`;
-  html+=(sch?.fields||[]).map(f => fieldHtml(f, node.params[f.key], 'p_'+f.key)).join('');
+
+  // Separate schema fields into string-typed (HTML path) and non-string (DOM/fx path).
+  const stringFields = (sch?.fields||[]).filter(f => fieldIsString(f.type) || f.type==='predicateRef');
+  const fxFields     = (sch?.fields||[]).filter(f => !fieldIsString(f.type) && f.type!=='predicateRef');
+
+  html+=stringFields.map(f => fieldHtml(f, node.params[f.key], 'p_'+f.key)).join('');
   $('#inspector').innerHTML=html;
   attachLabelField(node); attachDisableField(node);
-  for (const f of sch?.fields||[]) attachField(node, f, 'p_'+f.key);
+  for (const f of stringFields) attachField(node, f, 'p_'+f.key);
+
+  // Append DOM-based fx-toggle fields for non-string types.
+  const insp = $('#inspector');
+  for (const f of fxFields){
+    const el = renderFieldWithFx(node, f, renderLiteralInput);
+    if (el) insp.appendChild(el);
+  }
 }
 
 function fieldHtml(f, val, id){
