@@ -29,7 +29,9 @@ html,body{margin:0;background:var(--bg);color:var(--fg);
   font:14px/1.45 var(--sans);
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
+  height:100%;
 }
+body{display:flex;flex-direction:column}
 button,input,select,textarea{font:inherit;color:inherit}
 
 /* --- Header --- */
@@ -80,8 +82,8 @@ button:disabled{opacity:.5;cursor:wait}
 .kbd{font:11px/1 var(--mono);padding:2px 5px;border:1px solid currentColor;opacity:.55;border-radius:3px;margin-left:6px}
 
 /* --- Layout --- */
-main{display:grid;grid-template-columns:240px 1fr 360px;height:calc(100vh - 53px)}
-@media (max-width:1000px){main{grid-template-columns:1fr;height:auto}}
+main{display:grid;grid-template-columns:240px 1fr 360px;flex:1;min-height:0}
+@media (max-width:1000px){main{grid-template-columns:1fr;flex:none}}
 .col{overflow-y:auto;padding:18px 20px;border-right:1px solid var(--rule);background:var(--bg)}
 .col:nth-child(2){background:var(--bg-2)}
 .col:last-child{border-right:0}
@@ -233,6 +235,37 @@ main{display:grid;grid-template-columns:240px 1fr 360px;height:calc(100vh - 53px
 #status.ok{color:var(--ok)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* --- Params pane --- */
+#paramsPane{
+  padding:12px 20px;background:var(--bg);border-bottom:1px solid var(--rule);
+}
+#paramsPane h2{
+  font:600 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.1em;
+  color:var(--fg-3);margin:0 0 10px;display:flex;align-items:center;gap:8px;
+}
+#paramsPane h2 button{
+  padding:1px 7px;font:12px/1 var(--mono);border-radius:4px;
+}
+#paramsTable{
+  border-collapse:collapse;width:100%;font:12px/1.4 var(--mono);
+}
+#paramsTable th{
+  font:600 10px/1 var(--sans);text-transform:uppercase;letter-spacing:.08em;
+  color:var(--fg-3);text-align:left;padding:0 8px 6px 0;border-bottom:1px solid var(--rule);
+}
+#paramsTable td{padding:4px 8px 4px 0}
+#paramsTable input[type=text],#paramsTable input[type=number],#paramsTable select{
+  padding:5px 7px;font:12px/1 var(--mono);
+  background:var(--bg-2);border:1px solid var(--rule);border-radius:4px;color:var(--fg);
+  width:100%;min-width:60px;
+}
+#paramsTable input[type=text]:focus,#paramsTable input[type=number]:focus,#paramsTable select:focus{
+  outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;
+}
+#paramsTable input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent)}
+#paramsTable input:disabled,#paramsTable select:disabled{opacity:.35;cursor:not-allowed}
+#paramsTable tbody tr:first-child td{padding-top:8px}
+
 /* --- Misc --- */
 ::selection{background:var(--accent);color:var(--bg)}
 input[type=number]{appearance:textfield;-moz-appearance:textfield}
@@ -251,6 +284,17 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <button id="btnSave" class="primary" onclick="save()">Save<span class="kbd">⌘S</span></button>
   </div>
 </header>
+
+<section id="paramsPane">
+  <h2>Parameters <button id="addParamBtn" title="Add parameter">+</button></h2>
+  <table id="paramsTable">
+    <thead><tr>
+      <th>key</th><th>type</th><th>label</th><th>default</th>
+      <th>required</th><th>enum (CSV)</th><th></th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</section>
 
 <main>
   <div class="col palette">
@@ -300,12 +344,13 @@ setStatus('loading…', {spin:true});
     seq = { id:'', name:'New sequence', cooldownMs:60000, nodes:[] };
     allSeqs.push(seq);
   }
+  seq.params = seq.params || [];
   $('#seqName').value = seq.name;
   $('#cooldown').value = seq.cooldownMs ?? 60000;
   $('#seqName').oninput = e => { seq.name = e.target.value; markDirty(); };
   $('#cooldown').oninput = e => { seq.cooldownMs = parseInt(e.target.value,10)||0; markDirty(); };
   setStatus('');
-  renderPalette(); renderTree(); renderClip();
+  renderPalette(); renderTree(); renderClip(); renderParams();
 })();
 
 window.addEventListener('beforeunload', e => {
@@ -322,6 +367,90 @@ function isEditing(el){ return el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName
 
 function markDirty(){ dirty=true; $('#btnSave').classList.add('dirty'); }
 function clearDirty(){ dirty=false; $('#btnSave').classList.remove('dirty'); }
+
+// ---- Params pane ----
+const PARAM_TYPES = ['string','int','bool','stringlist','mac','enum','predicate'];
+
+function renderParams(){
+  const tb = document.querySelector('#paramsTable tbody');
+  tb.innerHTML = '';
+  (seq.params || []).forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.appendChild(pCell(ptextInput(p.key, v => { p.key = v; markDirty(); })));
+    tr.appendChild(pCell(ptypeSelect(p.type, v => {
+      p.type = v;
+      if (v === 'int') p.default = 0;
+      else if (v === 'bool') p.default = false;
+      else if (v === 'stringlist') p.default = [];
+      else p.default = '';
+      renderParams();
+      markDirty();
+    })));
+    tr.appendChild(pCell(ptextInput(p.label || '', v => { p.label = v; markDirty(); })));
+    tr.appendChild(pCell(pdefaultEditor(p)));
+    tr.appendChild(pCell(pcheckboxInput(p.required, v => { p.required = v; markDirty(); })));
+    tr.appendChild(pCell(ptextInput(p.enumValues || '',
+                                    v => { p.enumValues = v; markDirty(); },
+                                    p.type !== 'enum')));
+    const del = document.createElement('button');
+    del.textContent = '×'; del.title = 'Remove';
+    del.onclick = () => { seq.params.splice(i, 1); renderParams(); markDirty(); };
+    tr.appendChild(pCell(del));
+    tb.appendChild(tr);
+  });
+}
+
+function pCell(el){
+  const t = document.createElement('td');
+  t.appendChild(el);
+  return t;
+}
+
+function ptextInput(v, onChange, disabled){
+  const i = document.createElement('input');
+  i.type = 'text'; i.value = v; i.disabled = !!disabled;
+  i.oninput = () => onChange(i.value);
+  return i;
+}
+
+function pcheckboxInput(v, onChange){
+  const i = document.createElement('input');
+  i.type = 'checkbox'; i.checked = !!v;
+  i.onchange = () => onChange(i.checked);
+  return i;
+}
+
+function ptypeSelect(v, onChange){
+  const s = document.createElement('select');
+  for (const t of PARAM_TYPES){
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t;
+    if (t === v) o.selected = true;
+    s.appendChild(o);
+  }
+  s.onchange = () => onChange(s.value);
+  return s;
+}
+
+function pdefaultEditor(p){
+  if (p.type === 'bool') return pcheckboxInput(p.default, v => { p.default = v; markDirty(); });
+  if (p.type === 'int'){
+    const i = document.createElement('input');
+    i.type = 'number'; i.value = p.default ?? 0;
+    i.oninput = () => { p.default = parseInt(i.value, 10) || 0; markDirty(); };
+    return i;
+  }
+  return ptextInput(
+    typeof p.default === 'string' ? p.default : (p.default ?? ''),
+    v => { p.default = v; markDirty(); }
+  );
+}
+
+document.getElementById('addParamBtn').onclick = () => {
+  seq.params = seq.params || [];
+  seq.params.push({key:'param'+(seq.params.length+1), type:'string', label:'', default:'', required:false});
+  renderParams(); markDirty();
+};
 
 function setStatus(msg, opts){
   const el = $('#status');
