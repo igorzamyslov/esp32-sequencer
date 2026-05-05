@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: install cppcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends cppcheck
       - uses: pre-commit/action@v3.0.1
         env:
           # `no-commit-to-branch` would always fail when run on main itself.
