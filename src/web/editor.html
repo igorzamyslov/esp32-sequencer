@@ -696,6 +696,17 @@ function renderIdentifying(n){
     if (p.ip)  kv('ip', p.ip);
     if (p.key) kv('key', p.key);
   }
+  if (n.type === 'http-request'){
+    if (p.method) kv('method', p.method);
+    if (p.url)    kv('url', p.url);
+  }
+  if (n.type === 'ws-send'){
+    if (p.url) kv('url', p.url);
+  }
+  if (n.type === 'log'){
+    if (p.level && p.level !== 'info') kv('level', p.level);
+    if (p.text)  kv('text', p.text);
+  }
   if (n.type === 'if'){
     const pred = (p.predicate||{}).type;
     if (pred) kv('predicate', pred);
