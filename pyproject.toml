@@ -1,0 +1,105 @@
+[project]
+name = "esp32-sequencer-tools"
+version = "0.0.0"
+description = "Build & dev tooling for the esp32-sequencer firmware"
+requires-python = ">=3.11"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0",
+    "ruff>=0.7",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff — strict rule set. Anything genuinely unwanted goes in `ignore`.
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [".pio", ".cache"]
+
+[tool.ruff.lint]
+select = [
+    "F",     # pyflakes
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "C90",   # mccabe complexity
+    "I",     # isort
+    "N",     # pep8-naming
+    "D",     # pydocstyle
+    "UP",    # pyupgrade
+    "ANN",   # flake8-annotations
+    "ASYNC", # flake8-async
+    "S",     # flake8-bandit
+    "BLE",   # flake8-blind-except
+    "FBT",   # flake8-boolean-trap
+    "B",     # flake8-bugbear
+    "A",     # flake8-builtins
+    "COM",   # flake8-commas
+    "C4",    # flake8-comprehensions
+    "DTZ",   # flake8-datetimez
+    "T10",   # flake8-debugger
+    "EM",    # flake8-errmsg
+    "EXE",   # flake8-executable
+    "ISC",   # flake8-implicit-str-concat
+    "ICN",   # flake8-import-conventions
+    "G",     # flake8-logging-format
+    "INP",   # flake8-no-pep420
+    "PIE",   # flake8-pie
+    "T20",   # flake8-print
+    "PYI",   # flake8-pyi
+    "PT",    # flake8-pytest-style
+    "Q",     # flake8-quotes
+    "RSE",   # flake8-raise
+    "RET",   # flake8-return
+    "SLF",   # flake8-self
+    "SIM",   # flake8-simplify
+    "TID",   # flake8-tidy-imports
+    "TCH",   # flake8-type-checking
+    "ARG",   # flake8-unused-arguments
+    "PTH",   # flake8-use-pathlib
+    "ERA",   # eradicate (commented-out code)
+    "PGH",   # pygrep-hooks
+    "PL",    # pylint
+    "TRY",   # tryceratops
+    "FLY",   # flynt
+    "PERF",  # perflint
+    "RUF",   # ruff-specific
+]
+ignore = [
+    # Formatter handles these.
+    "E501",     # line length
+    "COM812",   # trailing comma — clashes with formatter
+    "ISC001",   # implicit string concat — clashes with formatter
+    # Docstring strictness — keep enforcement on public modules only.
+    "D100",     # missing docstring in public module
+    "D104",     # missing docstring in public package
+    "D203",     # one-blank-line-before-class — clashes with D211
+    "D213",     # multi-line-summary-second-line — clashes with D212
+    # Pragmatic for a tiny build script.
+    "PLR0913",  # too many arguments
+    "PLR2004",  # magic value comparisons
+    "T201",     # `print` is fine in build scripts
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tools/*" = [
+    "INP001",  # build scripts aren't an importable package
+    "S101",    # asserts in build scripts are fine
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+# ---------------------------------------------------------------------------
+# Codespell
+# ---------------------------------------------------------------------------
+[tool.codespell]
+skip = ".pio,.cache,uv.lock,*.bin,*.elf,src/web/web_assets.h,docs/superpowers/specs"
+check-filenames = true
+check-hidden = true
+# Add comma-separated misspellings to ignore here as the project grows.
+ignore-words-list = "ser,nd,te,fo,thru"

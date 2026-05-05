@@ -22,7 +22,8 @@ String TvController::buildPath() const {
 bool TvController::connectWithRetry(uint32_t total_timeout_ms) {
     s_instance_ = this;
     Serial.printf("[tv] target %s:8002, budget %lus\n",
-                  ip_.c_str(), (unsigned long)(total_timeout_ms / 1000));
+                  ip_.c_str(),
+                  (unsigned long)(total_timeout_ms / 1000));
 
     // Periodically probe TCP so the log distinguishes "TV not on network"
     // (port :8002 unreachable) from a real TLS handshake failure. Bridges
@@ -129,6 +130,7 @@ void TvController::onEvent(WStype_t type, uint8_t* payload, size_t len) {
             }
             break;
         }
-        default: break;
+        default:
+            break;
     }
 }

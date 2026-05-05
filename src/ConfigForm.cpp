@@ -3,7 +3,7 @@
 #include <ESPAsyncWebServer.h>
 
 namespace {
-    const char* INDEX_HTML = R"HTML(
+const char* INDEX_HTML = R"HTML(
 <!doctype html><meta charset=utf-8><title>esp32-sequencer setup</title>
 <meta name=viewport content="width=device-width,initial-scale=1">
 <style>
@@ -70,28 +70,40 @@ Fall back to setup AP if WiFi stays unreachable</label>
 </div>
 )HTML";
 
-    String htmlAttrEscape(const String& s) {
-        String out;
-        out.reserve(s.length() + 8);
-        for (size_t i = 0; i < s.length(); i++) {
-            char c = s[i];
-            switch (c) {
-                case '&':  out += "&amp;"; break;
-                case '<':  out += "&lt;"; break;
-                case '>':  out += "&gt;"; break;
-                case '"':  out += "&quot;"; break;
-                case '\'': out += "&#39;"; break;
-                default:   out += c; break;
-            }
+String htmlAttrEscape(const String& s) {
+    String out;
+    out.reserve(s.length() + 8);
+    for (size_t i = 0; i < s.length(); i++) {
+        char c = s[i];
+        switch (c) {
+            case '&':
+                out += "&amp;";
+                break;
+            case '<':
+                out += "&lt;";
+                break;
+            case '>':
+                out += "&gt;";
+                break;
+            case '"':
+                out += "&quot;";
+                break;
+            case '\'':
+                out += "&#39;";
+                break;
+            default:
+                out += c;
+                break;
         }
-        return out;
     }
-
-    String arg(AsyncWebServerRequest* req, const char* name) {
-        if (!req->hasParam(name, true)) return "";
-        return req->getParam(name, true)->value();
-    }
+    return out;
 }
+
+String arg(AsyncWebServerRequest* req, const char* name) {
+    if (!req->hasParam(name, true)) return "";
+    return req->getParam(name, true)->value();
+}
+}  // namespace
 
 String ConfigForm::renderHtml(const Config& cfg, bool /*include_pair_unused*/) {
     String html = INDEX_HTML;
@@ -102,8 +114,8 @@ String ConfigForm::renderHtml(const Config& cfg, bool /*include_pair_unused*/) {
 }
 
 void ConfigForm::applySave(AsyncWebServerRequest* req, Config& cfg) {
-    cfg.idleSsid     = arg(req, "idleSsid");
-    String idlePass  = arg(req, "idlePass");
+    cfg.idleSsid = arg(req, "idleSsid");
+    String idlePass = arg(req, "idlePass");
     if (idlePass.length()) cfg.idlePass = idlePass;
     cfg.setupFallback = req->hasParam("sFb", true);
     cfg.save();

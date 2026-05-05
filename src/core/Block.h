@@ -6,16 +6,16 @@
 #include <string>
 #include <vector>
 
-class Config;            // fwd, defined in Arduino code
-class NetworkManager;    // fwd
-class StatusLed;         // fwd
+class Config;          // fwd, defined in Arduino code
+class NetworkManager;  // fwd
+class StatusLed;       // fwd
 
 namespace seqb {
 
 struct RunCtx {
-    Config*         config = nullptr;
-    NetworkManager* net    = nullptr;
-    StatusLed*      led    = nullptr;
+    Config* config = nullptr;
+    NetworkManager* net = nullptr;
+    StatusLed* led = nullptr;
     std::map<std::string, std::string> scratch;
 };
 
@@ -23,8 +23,8 @@ enum class RunStatus { Ok, Failed };
 struct RunResult {
     RunStatus status;
     std::string error;
-    static RunResult ok()                            { return {RunStatus::Ok, ""}; }
-    static RunResult failed(const std::string& why)  { return {RunStatus::Failed, why}; }
+    static RunResult ok() { return {RunStatus::Ok, ""}; }
+    static RunResult failed(const std::string& why) { return {RunStatus::Failed, why}; }
 };
 
 class Interpreter;  // fwd

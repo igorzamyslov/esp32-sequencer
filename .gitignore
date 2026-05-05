@@ -9,3 +9,8 @@ src/web/web_assets.h
 *.bin
 *.elf
 CLAUDE.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/

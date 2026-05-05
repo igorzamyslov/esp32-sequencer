@@ -11,13 +11,13 @@ namespace {
 BleScanner* g_scanner = nullptr;
 
 constexpr FieldDef FIELDS[] = {
-    {"mac",         FieldType::MacAddress, "Device MAC", nullptr, nullptr, true},
-    {"cooldown_ms", FieldType::Int,        "Cooldown (ms)", "60000", nullptr, false},
+    {"mac", FieldType::MacAddress, "Device MAC", nullptr, nullptr, true},
+    {"cooldown_ms", FieldType::Int, "Cooldown (ms)", "60000", nullptr, false},
 };
 constexpr TriggerSchema SCH = {"ble-mac", "BLE MAC detected", FIELDS, 2, true};
 
 struct Active {
-    std::string mac;        // lowercase
+    std::string mac;  // lowercase
     std::string sequenceId;
     Trigger::FireCallback cb;
     uint32_t cooldownMs;
@@ -27,20 +27,30 @@ std::map<std::string, Active> g_active;
 
 std::string toLower(const std::string& s) {
     std::string out = s;
-    for (auto& c : out) c = (c >= 'A' && c <= 'Z') ? (c + 32) : c;
+    for (auto& c : out)
+        c = (c >= 'A' && c <= 'Z') ? (c + 32) : c;
     return out;
 }
 
-}
+}  // namespace
 
 namespace seqb {
 
-void BleMacTrigger::setScanner(BleScanner* s) { g_scanner = s; }
-BleMacTrigger& BleMacTrigger::instance() { static BleMacTrigger i; return i; }
-const TriggerSchema& BleMacTrigger::schema() const { return SCH; }
+void BleMacTrigger::setScanner(BleScanner* s) {
+    g_scanner = s;
+}
+BleMacTrigger& BleMacTrigger::instance() {
+    static BleMacTrigger i;
+    return i;
+}
+const TriggerSchema& BleMacTrigger::schema() const {
+    return SCH;
+}
 
-void BleMacTrigger::bind(const std::string& id, JsonVariantConst params,
-                         const std::string& seq, FireCallback cb) {
+void BleMacTrigger::bind(const std::string& id,
+                         JsonVariantConst params,
+                         const std::string& seq,
+                         FireCallback cb) {
     const char* mac = params["mac"].as<const char*>();
     if (!mac) return;
     Active a;
@@ -51,9 +61,13 @@ void BleMacTrigger::bind(const std::string& id, JsonVariantConst params,
     g_active[id] = a;
 }
 
-void BleMacTrigger::unbind(const std::string& id) { g_active.erase(id); }
+void BleMacTrigger::unbind(const std::string& id) {
+    g_active.erase(id);
+}
 
-int BleMacTrigger::activeCount() { return (int)g_active.size(); }
+int BleMacTrigger::activeCount() {
+    return (int)g_active.size();
+}
 
 void BleMacTrigger::onHit(const std::string& macLower, int /*rssi*/) {
     uint32_t now = millis();
@@ -66,6 +80,10 @@ void BleMacTrigger::onHit(const std::string& macLower, int /*rssi*/) {
     }
 }
 
-namespace { struct _Reg { _Reg(){ Registry::instance().registerTrigger(&BleMacTrigger::instance()); } } _reg; }
+namespace {
+struct _Reg {
+    _Reg() { Registry::instance().registerTrigger(&BleMacTrigger::instance()); }
+} _reg;
+}  // namespace
 
-}
+}  // namespace seqb

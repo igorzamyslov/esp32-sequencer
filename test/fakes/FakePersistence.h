@@ -11,4 +11,4 @@ public:
     }
     void save(const std::string& k, const std::string& v) override { store[k] = v; }
 };
-}
+}  // namespace seqb

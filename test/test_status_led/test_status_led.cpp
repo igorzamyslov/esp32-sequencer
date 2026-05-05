@@ -54,7 +54,8 @@ void test_error_three_pulses_then_idle() {
     led.setState(LedState::Error);
     // Anchor the timeline at t=0 with an initial tick.
     led.tick(0);
-    // Three 100ms pulses with 100ms gaps: on 0-100, off 100-200, on 200-300, off 300-400, on 400-500, off 500-600
+    // Three 100ms pulses with 100ms gaps: on 0-100, off 100-200, on 200-300, off 300-400, on
+    // 400-500, off 500-600
     TEST_ASSERT_TRUE(led.isOnAt(50));
     TEST_ASSERT_FALSE(led.isOnAt(150));
     TEST_ASSERT_TRUE(led.isOnAt(250));
@@ -70,7 +71,7 @@ void test_tick_anchors_at_first_call_not_at_zero() {
     led.setState(LedState::Success);
     // First tick at t=50000ms: this is when the timeline actually begins.
     led.tick(50000);
-    TEST_ASSERT_EQUAL(LedState::Success, led.state()); // must NOT have auto-flipped
+    TEST_ASSERT_EQUAL(LedState::Success, led.state());  // must NOT have auto-flipped
     TEST_ASSERT_TRUE(led.currentlyOn());
     // Still within 2s of state entry (50000): solid on
     led.tick(51999);
@@ -84,7 +85,7 @@ void test_tick_error_anchors_at_first_call_not_at_zero() {
     StatusLed led;
     led.setState(LedState::Error);
     led.tick(50000);
-    TEST_ASSERT_EQUAL(LedState::Error, led.state()); // must NOT have auto-flipped
+    TEST_ASSERT_EQUAL(LedState::Error, led.state());  // must NOT have auto-flipped
     led.tick(50601);
     TEST_ASSERT_EQUAL(LedState::Idle, led.state());
 }

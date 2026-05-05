@@ -16,14 +16,20 @@ public:
     const BlockSchema& schema() const override { return SCH; }
     RunResult run(JsonVariantConst params,
                   const std::map<std::string, std::vector<Node>>&,
-                  RunCtx&, Interpreter&) override {
+                  RunCtx&,
+                  Interpreter&) override {
         uint32_t ms = params["ms"] | 0;
         if (ms) delay(ms);
         return RunResult::ok();
     }
 };
 
-WaitBlock& instance(){ static WaitBlock i; return i; }
-struct _Reg { _Reg(){ Registry::instance().registerBlock(&instance()); } } _reg;
-
+WaitBlock& instance() {
+    static WaitBlock i;
+    return i;
 }
+struct _Reg {
+    _Reg() { Registry::instance().registerBlock(&instance()); }
+} _reg;
+
+}  // namespace

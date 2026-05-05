@@ -13,4 +13,4 @@ struct DefaultsResult {
 // Users edit MACs/IPs in the editor on first run.
 DefaultsResult buildDefaults();
 
-}
+}  // namespace seqb

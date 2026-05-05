@@ -7,14 +7,17 @@ public:
         schema_ = {t, l, c, nullptr, 0, nullptr, 0};
     }
     const BlockSchema& schema() const override { return schema_; }
-    RunResult run(JsonVariantConst, const std::map<std::string, std::vector<Node>>&,
-                  RunCtx&, Interpreter&) override {
+    RunResult run(JsonVariantConst,
+                  const std::map<std::string, std::vector<Node>>&,
+                  RunCtx&,
+                  Interpreter&) override {
         ran = true;
         return result;
     }
     bool ran = false;
     RunResult result = RunResult::ok();
+
 private:
     BlockSchema schema_;
 };
-}
+}  // namespace seqb

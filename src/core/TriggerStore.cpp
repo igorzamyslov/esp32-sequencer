@@ -14,8 +14,9 @@ void TriggerStore::save() {
     p_.save(KEY, SequenceCodec::encodeTriggers(ts_));
 }
 void TriggerStore::replaceAll(std::vector<TriggerBinding> ts) {
-    for (auto& b : ts) if (b.id.empty()) b.id = SequenceStore::newId();
+    for (auto& b : ts)
+        if (b.id.empty()) b.id = SequenceStore::newId();
     ts_ = std::move(ts);
 }
 
-}
+}  // namespace seqb

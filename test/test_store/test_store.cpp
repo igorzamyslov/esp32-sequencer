@@ -15,7 +15,9 @@ void setUp() {
     Registry::instance().registerBlock(&w);
     fp = new FakePersistence();
 }
-void tearDown() { delete fp; }
+void tearDown() {
+    delete fp;
+}
 
 void test_store_loads_empty() {
     SequenceStore s(*fp);
@@ -26,8 +28,11 @@ void test_store_loads_empty() {
 void test_store_save_and_reload() {
     SequenceStore s1(*fp);
     Sequence seq;
-    seq.id = "abc"; seq.name = "x";
-    Node n; n.type = "wait"; n.params["ms"] = 100;
+    seq.id = "abc";
+    seq.name = "x";
+    Node n;
+    n.type = "wait";
+    n.params["ms"] = 100;
     seq.nodes.push_back(n);
     s1.replaceAll({seq});
     s1.save();
@@ -40,7 +45,8 @@ void test_store_save_and_reload() {
 
 void test_store_assigns_id_for_new() {
     SequenceStore s(*fp);
-    Sequence seq; seq.name = "no-id";  // no id
+    Sequence seq;
+    seq.name = "no-id";  // no id
     s.replaceAll({seq});
     TEST_ASSERT_EQUAL(1, (int)s.all().size());
     TEST_ASSERT_TRUE(!s.all()[0].id.empty());
@@ -50,7 +56,9 @@ void test_store_assigns_id_for_new() {
 void test_trigger_store_round_trip() {
     TriggerStore ts(*fp);
     TriggerBinding b;
-    b.id = ""; b.type = "http-route"; b.sequenceId = "abc";
+    b.id = "";
+    b.type = "http-route";
+    b.sequenceId = "abc";
     b.params["path"] = "/play";
     ts.replaceAll({b});
     ts.save();

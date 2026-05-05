@@ -16,14 +16,14 @@ void interpDelay(uint32_t ms) {
     (void)ms;
 #endif
 }
-}
+}  // namespace
 
 RunResult Interpreter::runSequence(const Sequence& s, RunCtx& ctx) {
     return runSlot(s.nodes, ctx);
 }
 
 RunResult Interpreter::runSlot(const std::vector<Node>& nodes, RunCtx& ctx) {
-    for (auto& n : nodes) {
+    for (const auto& n : nodes) {
         auto r = runNode(n, ctx);
         if (r.status == RunStatus::Failed) return r;
     }
@@ -52,6 +52,8 @@ RunResult Interpreter::runNode(const Node& n, RunCtx& ctx) {
     }
     if (n.type == "repeat") {
         int count = n.params["count"] | 1;
+        // cppcheck-suppress badBitmaskCheck ; ArduinoJson's `|` is its
+        // value-or-default operator overload, not bitwise OR.
         uint32_t intervalMs = n.params["interval_ms"] | 0;
         auto it = n.children.find("body");
         if (it == n.children.end()) return RunResult::ok();
@@ -67,4 +69,4 @@ RunResult Interpreter::runNode(const Node& n, RunCtx& ctx) {
     return b->run(n.params, n.children, ctx, *this);
 }
 
-}
+}  // namespace seqb

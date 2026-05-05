@@ -1,8 +1,10 @@
 #include "NetworkManager.h"
 #include <WiFi.h>
 
-bool NetworkManager::connect(const String& ssid, const String& pass,
-                             const String& staticIp, const String& gateway,
+bool NetworkManager::connect(const String& ssid,
+                             const String& pass,
+                             const String& staticIp,
+                             const String& gateway,
                              uint32_t timeout_ms) {
     if (current_ == ssid && WiFi.isConnected()) return true;
     if (WiFi.isConnected()) WiFi.disconnect(true, true);
@@ -35,8 +37,8 @@ bool NetworkManager::connect(const String& ssid, const String& pass,
             // Costs a bit of power but the device is mains-powered.
             WiFi.setSleep(WIFI_PS_NONE);
             current_ = ssid;
-            Serial.printf("[net] connected ip=%s rssi=%d\n",
-                          WiFi.localIP().toString().c_str(), WiFi.RSSI());
+            Serial.printf(
+                "[net] connected ip=%s rssi=%d\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
             return true;
         }
         delay(100);

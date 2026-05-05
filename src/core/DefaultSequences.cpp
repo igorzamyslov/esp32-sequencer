@@ -2,7 +2,11 @@
 
 namespace seqb {
 
-static Node leaf(const char* type) { Node n; n.type = type; return n; }
+static Node leaf(const char* type) {
+    Node n;
+    n.type = type;
+    return n;
+}
 
 // Self-contained demo: shows label, divider, wait, and repeat with an interval.
 // Uses no external hardware so it runs cleanly on a fresh device. Edit or
@@ -30,7 +34,8 @@ DefaultsResult buildDefaults() {
         rep.params["count"] = 3;
         rep.params["interval_ms"] = 250;
         rep.params["_label"] = "Three short pulses, 250ms apart";
-        Node w = leaf("wait"); w.params["ms"] = 50;
+        Node w = leaf("wait");
+        w.params["ms"] = 50;
         rep.children["body"].push_back(w);
         ex.nodes.push_back(rep);
     }
@@ -53,4 +58,4 @@ DefaultsResult buildDefaults() {
     return r;
 }
 
-}
+}  // namespace seqb

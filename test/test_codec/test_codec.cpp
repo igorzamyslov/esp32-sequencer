@@ -53,8 +53,12 @@ void test_decode_unknown_block_marks_broken() {
 
 void test_encode_round_trip() {
     Sequence s;
-    s.id = "id1"; s.name = "rt"; s.cooldownMs = 1000;
-    Node n; n.type = "wait"; n.params["ms"] = 250;
+    s.id = "id1";
+    s.name = "rt";
+    s.cooldownMs = 1000;
+    Node n;
+    n.type = "wait";
+    n.params["ms"] = 250;
     s.nodes.push_back(n);
     std::vector<Sequence> in = {s};
     std::string j = SequenceCodec::encodeList(in);

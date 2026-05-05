@@ -14,11 +14,20 @@ class DividerBlock : public Block {
 public:
     const BlockSchema& schema() const override { return SCH; }
     // Visual-only: interpreter recognises the type and skips it.
-    RunResult run(JsonVariantConst, const std::map<std::string, std::vector<Node>>&,
-                  RunCtx&, Interpreter&) override { return RunResult::ok(); }
+    RunResult run(JsonVariantConst,
+                  const std::map<std::string, std::vector<Node>>&,
+                  RunCtx&,
+                  Interpreter&) override {
+        return RunResult::ok();
+    }
 };
 
-DividerBlock& instance(){ static DividerBlock i; return i; }
-struct _Reg { _Reg(){ Registry::instance().registerBlock(&instance()); } } _reg;
-
+DividerBlock& instance() {
+    static DividerBlock i;
+    return i;
 }
+struct _Reg {
+    _Reg() { Registry::instance().registerBlock(&instance()); }
+} _reg;
+
+}  // namespace

@@ -12,8 +12,9 @@ public:
     const std::vector<Sequence>& all() const { return seqs_; }
     const Sequence* findById(const std::string& id) const;
     static std::string newId();
+
 private:
     Persistence& p_;
     std::vector<Sequence> seqs_;
 };
-}
+}  // namespace seqb
