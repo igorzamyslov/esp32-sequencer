@@ -114,47 +114,58 @@ main{display:grid;grid-template-columns:240px 1fr 360px;height:calc(100vh - 53px
 
 /* --- Tree --- */
 .node{
-  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;
-  padding:10px 12px;margin:5px 0;
+  display:grid;grid-template-columns:auto 1fr auto;align-items:start;gap:14px;
+  padding:12px 14px;margin:6px 0;
   background:var(--bg);border:1px solid var(--rule);border-radius:6px;
   cursor:pointer;transition:border-color .1s,background .1s,box-shadow .1s,opacity .1s;
 }
 .node[draggable]{cursor:grab}
 .node[draggable]:active{cursor:grabbing}
-.node.dragging{opacity:.4}
+.node.dragging{opacity:.35}
 .node.drop-above{box-shadow:0 -2px 0 0 var(--accent)}
 .node.drop-below{box-shadow:0 2px 0 0 var(--accent)}
 .node:hover{border-color:var(--fg-3);background:var(--bg-3)}
 .node.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:var(--bg-3)}
-.node.disabled{opacity:.5}
-.node.disabled .label{text-decoration:line-through;text-decoration-color:var(--fg-3)}
+.node.disabled{opacity:.55}
+.node.disabled .label,.node.disabled .row2{text-decoration:line-through;text-decoration-color:var(--fg-3)}
 .node.invalid{border-color:var(--warn)}
 .node.invalid.selected{box-shadow:0 0 0 1px var(--warn) inset;border-color:var(--warn)}
 
 .node .badge{
-  width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;
-  font:11px/1 var(--mono);color:var(--fg-2);
-  border:1px solid var(--rule);border-radius:50%;
+  width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;
+  font:12px/1 var(--mono);color:var(--accent-2);
+  border:1px solid var(--rule);border-radius:50%;background:var(--bg-2);
+  flex-shrink:0;margin-top:1px;
 }
-.node .body{min-width:0;display:flex;flex-direction:column;gap:3px}
-.node .row1{display:flex;align-items:center;gap:8px;min-width:0}
-.node .label{font:600 14px/1.3 var(--sans);color:var(--fg);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.node .label.empty{font-weight:400;color:var(--fg-3);font-style:normal}
+.node .body{min-width:0;display:flex;flex-direction:column;gap:5px}
+.node .label{
+  font:600 15px/1.3 var(--sans);color:var(--fg);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.node .row2{
+  display:flex;align-items:center;gap:10px;
+  font:12.5px/1.2 var(--mono);color:var(--fg-2);
+}
+.node .row2 .mult{color:var(--fg);font-weight:500}
+.node .row3{
+  font:12.5px/1.4 var(--mono);color:var(--fg-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.node .row3 .v{color:var(--fg-2)}
+.node .row4{font:12.5px/1.3 var(--sans);font-weight:500;display:flex;gap:14px;flex-wrap:wrap}
+.node .row4 .miss{color:var(--warn)}
+.node .row4 .miss::before{content:"⚠ "}
+.node .row4 .off{color:var(--danger)}
 .node .pill{
-  font:11px/1 var(--mono);color:var(--accent-2);
-  padding:3px 6px;border:1px solid var(--rule);border-radius:3px;
+  font:11.5px/1 var(--mono);color:var(--accent-2);
+  padding:4px 8px;border:1px solid var(--rule);border-radius:3px;
   white-space:nowrap;flex-shrink:0;background:var(--bg-2);
 }
-.node .info{font:12px/1.3 var(--mono);color:var(--fg-2);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.node .info .miss{color:var(--warn);font-weight:600}
-.node .info .miss::before{content:"⚠ "}
-.node .info .off{color:var(--danger);font-weight:600;margin-left:8px}
-.node .ctrl{display:flex;gap:2px;opacity:0;transition:opacity .1s}
+.node .ctrl{display:flex;gap:3px;opacity:0;transition:opacity .1s;margin-top:1px}
 .node:hover .ctrl,.node.selected .ctrl{opacity:1}
 .node .ctrl button{
-  padding:5px 8px;font-size:12px;border-color:transparent;background:transparent;color:var(--fg-2);
+  padding:6px 9px;font:14px/1 var(--sans);border-color:transparent;
+  background:transparent;color:var(--fg-2);min-width:30px;
 }
 .node .ctrl button:hover{border-color:var(--rule);color:var(--fg);background:var(--bg-2)}
 .node .ctrl button.danger:hover{border-color:var(--danger);color:var(--danger);background:var(--bg-2)}
@@ -176,7 +187,9 @@ main{display:grid;grid-template-columns:240px 1fr 360px;height:calc(100vh - 53px
   color:var(--fg-3);margin:8px 0 4px;
 }
 .empty-tree{padding:20px 12px;color:var(--fg-3);font-size:13px;text-align:center;
-  border:1px dashed var(--rule);border-radius:6px;background:var(--bg)}
+  border:1px dashed var(--rule);border-radius:6px;background:var(--bg);
+  transition:border-color .1s,background .1s,color .1s}
+.empty-tree.drop-into{border-color:var(--accent);background:var(--bg-3);color:var(--fg-2)}
 
 /* --- Inspector --- */
 .insp-head{
@@ -459,7 +472,7 @@ function missingRequired(n, sch){
 
 function renderTree(){
   $('#tree').innerHTML=renderList(seq.nodes,[]) ||
-    '<div class="empty-tree">Empty. Pick a block from the palette.</div>';
+    '<div class="empty-tree" data-empty-slot="[]">Empty. Pick a block from the palette, or drop one here.</div>';
   $('#tree').querySelectorAll('[data-path]').forEach(el => {
     el.onclick = ev => {
       if (ev.target.closest('button')) return;
@@ -467,17 +480,20 @@ function renderTree(){
       selectPath(JSON.parse(el.dataset.path));
     };
     el.ondragstart = ev => onDragStart(el, ev);
-    el.ondragover  = ev => onDragOver(el, ev);
-    el.ondragleave = ev => onDragLeave(el, ev);
-    el.ondrop      = ev => onDrop(el, ev);
+    el.ondragover  = ev => onNodeDragOver(el, ev);
+    el.ondragleave = ev => clearDropFx(el);
+    el.ondrop      = ev => onNodeDrop(el, ev);
     el.ondragend   = ev => onDragEnd(el, ev);
+  });
+  $('#tree').querySelectorAll('[data-empty-slot]').forEach(el => {
+    el.ondragover  = ev => onSlotDragOver(el, ev);
+    el.ondragleave = ev => el.classList.remove('drop-into');
+    el.ondrop      = ev => onSlotDrop(el, ev);
   });
   $('#tree').querySelectorAll('[data-act]').forEach(b => {
     b.onclick = ev => {
       ev.stopPropagation();
       const p=JSON.parse(b.dataset.path); const a=b.dataset.act;
-      if (a==='up') moveNode(p,-1);
-      if (a==='down') moveNode(p,1);
       if (a==='copy') copyNode(p);
       if (a==='cut') cutNode(p);
       if (a==='del') deleteNode(p);
@@ -485,56 +501,96 @@ function renderTree(){
   });
 }
 
-// ---- Drag-and-drop reordering (vertical, same-slot only) ----
-let dragSrc = null; // {path, parentKey}
+// ---- Drag-and-drop ----
+// Cross-slot moves are allowed; the only restriction is that a block can't be
+// dropped onto itself or any of its descendants (would create a cycle).
+let dragSrc = null;     // path of the dragging node
 
-function pathParentKey(p){ return JSON.stringify(p.slice(0,-1)); }
+function isAncestor(ancestor, descendant){
+  if (ancestor.length >= descendant.length) return false;
+  for (let i=0;i<ancestor.length;i++) if (ancestor[i] !== descendant[i]) return false;
+  return true;
+}
+function pathsEqual(a,b){ return JSON.stringify(a)===JSON.stringify(b); }
+function clearAllDropFx(){
+  document.querySelectorAll('.drop-above,.drop-below,.drop-into')
+    .forEach(e => e.classList.remove('drop-above','drop-below','drop-into'));
+}
+function clearDropFx(el){ el.classList.remove('drop-above','drop-below','drop-into'); }
 
 function onDragStart(el, ev){
-  const path = JSON.parse(el.dataset.path);
-  dragSrc = { path, parentKey: pathParentKey(path) };
+  dragSrc = JSON.parse(el.dataset.path);
   el.classList.add('dragging');
   ev.dataTransfer.effectAllowed = 'move';
-  // some browsers require non-empty data
-  try { ev.dataTransfer.setData('text/plain', JSON.stringify(path)); } catch {}
+  try { ev.dataTransfer.setData('text/plain', JSON.stringify(dragSrc)); } catch {}
 }
-function onDragOver(el, ev){
+function onNodeDragOver(el, ev){
   if (!dragSrc) return;
-  const path = JSON.parse(el.dataset.path);
-  // only same-parent reordering
-  if (pathParentKey(path) !== dragSrc.parentKey) return;
+  const tgt = JSON.parse(el.dataset.path);
+  // can't drop a block onto itself or one of its own descendants
+  if (pathsEqual(tgt, dragSrc) || isAncestor(dragSrc, tgt)) return;
   ev.preventDefault();
+  ev.stopPropagation();
   const r = el.getBoundingClientRect();
   const before = (ev.clientY - r.top) < r.height / 2;
   el.classList.toggle('drop-above', before);
   el.classList.toggle('drop-below', !before);
   ev.dataTransfer.dropEffect = 'move';
 }
-function onDragLeave(el){
-  el.classList.remove('drop-above','drop-below');
-}
-function onDrop(el, ev){
+function onNodeDrop(el, ev){
   if (!dragSrc) return;
-  const tgtPath = JSON.parse(el.dataset.path);
-  if (pathParentKey(tgtPath) !== dragSrc.parentKey) return;
+  const tgt = JSON.parse(el.dataset.path);
+  if (pathsEqual(tgt, dragSrc) || isAncestor(dragSrc, tgt)) return;
   ev.preventDefault();
+  ev.stopPropagation();
   const r = el.getBoundingClientRect();
   const before = (ev.clientY - r.top) < r.height / 2;
-  const parent = tgtPath.slice(0,-1);
-  const list = getList(parent);
-  const fromIdx = dragSrc.path[dragSrc.path.length-1];
-  let toIdx = tgtPath[tgtPath.length-1] + (before ? 0 : 1);
-  if (toIdx > fromIdx) toIdx--;
-  if (toIdx === fromIdx){ el.classList.remove('drop-above','drop-below'); return; }
-  const [moved] = list.splice(fromIdx, 1);
-  list.splice(toIdx, 0, moved);
-  selPath = [...parent, toIdx];
-  el.classList.remove('drop-above','drop-below');
+  moveAcross(dragSrc, tgt.slice(0,-1), tgt[tgt.length-1] + (before ? 0 : 1));
+  clearAllDropFx();
+}
+function onSlotDragOver(el, ev){
+  if (!dragSrc) return;
+  const slotPath = JSON.parse(el.dataset.emptySlot);
+  if (isAncestor(dragSrc, slotPath) || pathsEqual(dragSrc, slotPath)) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  el.classList.add('drop-into');
+  ev.dataTransfer.dropEffect = 'move';
+}
+function onSlotDrop(el, ev){
+  if (!dragSrc) return;
+  const slotPath = JSON.parse(el.dataset.emptySlot);
+  if (isAncestor(dragSrc, slotPath) || pathsEqual(dragSrc, slotPath)) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  moveAcross(dragSrc, slotPath, 0);
+  clearAllDropFx();
+}
+function moveAcross(srcPath, dstParent, dstIdx){
+  const srcParent = srcPath.slice(0,-1);
+  const srcIdx    = srcPath[srcPath.length-1];
+  const sameParent = pathsEqual(srcParent, dstParent);
+
+  if (sameParent){
+    let to = dstIdx;
+    if (to > srcIdx) to--;
+    if (to === srcIdx) return;
+    const list = getList(srcParent);
+    const [moved] = list.splice(srcIdx, 1);
+    list.splice(to, 0, moved);
+    selPath = [...srcParent, to];
+  } else {
+    const fromList = getList(srcParent);
+    const [moved] = fromList.splice(srcIdx, 1);
+    const toList = getList(dstParent);
+    toList.splice(dstIdx, 0, moved);
+    selPath = [...dstParent, dstIdx];
+  }
   markDirty(); renderTree(); renderInspector();
 }
 function onDragEnd(el){
   el.classList.remove('dragging');
-  document.querySelectorAll('.drop-above,.drop-below').forEach(e => e.classList.remove('drop-above','drop-below'));
+  clearAllDropFx();
   dragSrc = null;
 }
 
@@ -546,28 +602,30 @@ function renderList(list, basePath){
     const dis=!!(n.params&&n.params._disabled);
     const lab=(n.params&&n.params._label)||'';
     const miss=missingRequired(n,sch);
-    const summary=renderSummary(n,sch);
     const pathStr=JSON.stringify(path);
 
     if (n.type==='divider'){
       return `<div class="node divider${sel?' selected':''}" draggable="true" data-path='${pathStr}'>
         <div class="body"><span class="label">${escapeHtml((n.params&&n.params.text)||'—')}</span></div>
         <div class="ctrl">
-          <button data-act="up" data-path='${pathStr}' title="Move up">↑</button>
-          <button data-act="down" data-path='${pathStr}' title="Move down">↓</button>
-          <button data-act="copy" data-path='${pathStr}'>Copy</button>
-          <button data-act="del" data-path='${pathStr}' class="danger">✕</button>
+          <button data-act="copy" data-path='${pathStr}' title="Copy">⎘</button>
+          <button data-act="cut" data-path='${pathStr}' title="Cut">✂</button>
+          <button data-act="del" data-path='${pathStr}' class="danger" title="Delete">✕</button>
         </div>
       </div>`;
     }
 
     let slots='';
     if (sch?.childSlots){
-      slots=sch.childSlots.map(s => `
-        <div class="slot">
+      slots=sch.childSlots.map(s => {
+        const slotPath=[...path,s];
+        const inner = renderList(n.children[s], slotPath);
+        const emptyDrop = `<div class="empty-tree" data-empty-slot='${JSON.stringify(slotPath)}'>drop a block here, or pick one from the palette</div>`;
+        return `<div class="slot">
           <div class="slot-label">${escapeHtml(s)}</div>
-          ${renderList(n.children[s],[...path,s]) || '<div class="empty-tree">empty — add or paste a block here</div>'}
-        </div>`).join('');
+          ${inner || emptyDrop}
+        </div>`;
+      }).join('');
     }
 
     const cls=['node'];
@@ -575,23 +633,22 @@ function renderList(list, basePath){
     if (dis) cls.push('disabled');
     if (miss.length) cls.push('invalid');
 
+    const mult = renderMultiplier(n);
+    const r3   = renderIdentifying(n);
+    const r4parts = [];
+    if (miss.length) r4parts.push(`<span class="miss">missing: ${escapeHtml(miss.join(', '))}</span>`);
+    if (dis)         r4parts.push(`<span class="off">disabled</span>`);
+
     return `
       <div class="${cls.join(' ')}" draggable="true" data-path='${pathStr}'>
         <span class="badge">${i+1}</span>
         <div class="body">
-          <div class="row1">
-            <span class="label${lab?'':' empty'}">${escapeHtml(lab || '— no label —')}</span>
-            <span class="pill">${escapeHtml(n.type)}</span>
-          </div>
-          <div class="info">
-            ${summary?escapeHtml(summary):'<span style="color:var(--fg-3)">—</span>'}
-            ${miss.length?`<span class="miss">missing ${escapeHtml(miss.join(', '))}</span>`:''}
-            ${dis?'<span class="off">disabled</span>':''}
-          </div>
+          ${lab?`<div class="label">${escapeHtml(lab)}</div>`:''}
+          <div class="row2"><span class="pill">${escapeHtml(n.type)}</span>${mult?`<span class="mult">${escapeHtml(mult)}</span>`:''}</div>
+          ${r3?`<div class="row3">${r3}</div>`:''}
+          ${r4parts.length?`<div class="row4">${r4parts.join('')}</div>`:''}
         </div>
         <div class="ctrl">
-          <button data-act="up" data-path='${pathStr}' title="Move up">↑</button>
-          <button data-act="down" data-path='${pathStr}' title="Move down">↓</button>
           <button data-act="copy" data-path='${pathStr}' title="Copy">⎘</button>
           <button data-act="cut" data-path='${pathStr}' title="Cut">✂</button>
           <button data-act="del" data-path='${pathStr}' class="danger" title="Delete">✕</button>
@@ -601,17 +658,33 @@ function renderList(list, basePath){
   }).join('');
 }
 
-function renderSummary(n, sch){
-  if (!sch) return '?';
-  const p=n.params||{};
-  if (n.type==='wait') return (p.ms||0)+' ms';
-  if (n.type==='repeat') return '× '+(p.count||1)+(p.interval_ms?` · ${p.interval_ms} ms gap`:'');
-  if (n.type==='wol') return p.mac||'';
-  if (n.type==='wifi-hop') return p.ssid||'';
-  if (n.type==='samsung-key') return (p.ip?p.ip+' · ':'')+(p.key||'');
-  if (n.type==='if') return (p.predicate||{}).type||'';
-  if (n.type==='divider') return '';
+// Row 2 multiplier-style annotation. Currently only repeat uses it.
+function renderMultiplier(n){
+  const p = n.params || {};
+  if (n.type === 'repeat') return '× '+(p.count||1)+(p.interval_ms?` · ${p.interval_ms} ms gap`:'');
+  if (n.type === 'wait')   return (p.ms||0)+' ms';
   return '';
+}
+
+// Row 3: key params formatted as "key: value · key: value".
+function renderIdentifying(n){
+  const p = n.params || {};
+  const parts = [];
+  const kv = (k, v) => parts.push(`<span><span class="k">${escapeHtml(k)}:</span> <span class="v">${escapeHtml(v)}</span></span>`);
+  if (n.type === 'wol' && p.mac) kv('mac', p.mac);
+  if (n.type === 'wifi-hop'){
+    if (p.ssid) kv('ssid', p.ssid);
+    if (p.static_ip) kv('static', p.static_ip);
+  }
+  if (n.type === 'samsung-key'){
+    if (p.ip)  kv('ip', p.ip);
+    if (p.key) kv('key', p.key);
+  }
+  if (n.type === 'if'){
+    const pred = (p.predicate||{}).type;
+    if (pred) kv('predicate', pred);
+  }
+  return parts.join(' &nbsp;·&nbsp; ');
 }
 
 // ---- Inspector ----
