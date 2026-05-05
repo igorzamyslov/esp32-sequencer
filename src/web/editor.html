@@ -342,6 +342,16 @@ setStatus('loading…', {spin:true});
       fetch('/api/sequences').then(r=>r.json()),
     ]);
   }catch(e){ setStatus('failed: '+e, {err:true}); return; }
+  // Inject client-side hardcoded call-sequence schema (not in /api/schema).
+  schema.blocks.push({
+    type: 'call-sequence',
+    label: 'Call sequence',
+    category: 'Flow',
+    fields: [
+      {key:'sequenceId', type:'enum', label:'Sequence', required:true, dynamicEnum:'sequences'},
+    ],
+    childSlots: []
+  });
   for (const s of allSeqs) (s.nodes||[]).forEach(normalizeNode);
   if (seqId) seq = allSeqs.find(s => s.id === seqId);
   if (!seq){
@@ -900,17 +910,37 @@ function renderLiteralInput(node, field){
   if (f.type === 'enum'){
     const sel = document.createElement('select');
     if (f.required) sel.classList.toggle('missing', val === undefined || val === null || val === '');
-    for (const o of (f.enum || '').split(',')){
-      const opt = document.createElement('option');
-      opt.value = o; opt.textContent = o;
-      if (o === val) opt.selected = true;
-      sel.appendChild(opt);
+    if (f.dynamicEnum === 'sequences'){
+      const empty = document.createElement('option');
+      empty.value = ''; empty.textContent = '-- pick sequence --';
+      if (!val) empty.selected = true;
+      sel.appendChild(empty);
+      for (const s of allSeqs){
+        if (s.id && s.id === seq.id) continue; // exclude self
+        const opt = document.createElement('option');
+        opt.value = s.id; opt.textContent = s.name || s.id;
+        if (s.id === val) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.onchange = () => {
+        node.params[f.key] = sel.value;
+        if (f.required) sel.classList.toggle('missing', sel.value === '');
+        markDirty();
+        renderInspector(); // rebuild args form when callee changes
+      };
+    } else {
+      for (const o of (f.enum || '').split(',')){
+        const opt = document.createElement('option');
+        opt.value = o; opt.textContent = o;
+        if (o === val) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.onchange = () => {
+        node.params[f.key] = sel.value;
+        if (f.required) sel.classList.toggle('missing', sel.value === '');
+        markDirty();
+      };
     }
-    sel.onchange = () => {
-      node.params[f.key] = sel.value;
-      if (f.required) sel.classList.toggle('missing', sel.value === '');
-      markDirty();
-    };
     return sel;
   }
   // Fallback for any other non-string type: plain text input
@@ -921,9 +951,25 @@ function renderLiteralInput(node, field){
   return inp;
 }
 
-function renderFieldWithFx(node, field, renderLit){
-  if (fieldIsString(field.type)){
-    return null; // handled by string path
+// Renders a simple literal text input for string/mac/stringlist fields.
+function renderStringLiteral(node, field){
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  const val = node.params[field.key];
+  inp.value = typeof val === 'string' ? val : (val ?? '');
+  const miss = field.required && (!val);
+  if (miss) inp.classList.add('missing');
+  inp.oninput = () => {
+    node.params[field.key] = inp.value;
+    if (field.required) inp.classList.toggle('missing', inp.value === '');
+    markDirty();
+  };
+  return inp;
+}
+
+function renderFieldWithFx(node, field, renderLit, allowString){
+  if (fieldIsString(field.type) && !allowString){
+    return null; // handled by string path in main inspector
   }
 
   const wrap = document.createElement('div');
@@ -984,6 +1030,41 @@ function renderFieldWithFx(node, field, renderLit){
   return wrap;
 }
 
+// ---- Call-sequence args sub-form ----
+function renderCallArgsForm(node){
+  const wrap = document.createElement('div');
+  wrap.className = 'args-form';
+  const title = document.createElement('h3');
+  title.textContent = 'Arguments';
+  wrap.appendChild(title);
+
+  const callee = allSeqs.find(s => s.id === node.params.sequenceId) || null;
+  if (!callee || !callee.params || !callee.params.length){
+    const empty = document.createElement('p');
+    empty.style.opacity = '0.6';
+    empty.textContent = callee ? '(callee has no parameters)' : '(pick a sequence to set args)';
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  if (!node.params.args) node.params.args = {};
+
+  for (const p of callee.params){
+    const fakeField = {
+      key: p.key,
+      type: p.type,
+      label: p.label || p.key,
+      default: p.default,
+      enumValues: p.enumValues
+    };
+    const subnode = { params: node.params.args };
+    const lit = fieldIsString(p.type) ? renderStringLiteral : renderLiteralInput;
+    const el = renderFieldWithFx(subnode, fakeField, lit, /*allowString=*/true);
+    if (el) wrap.appendChild(el);
+  }
+  return wrap;
+}
+
 // ---- Inspector ----
 function renderInspector(){
   if (!selPath){ $('#inspector').innerHTML='<div class="empty-tree">Select a block to edit.</div>'; return; }
@@ -1015,6 +1096,11 @@ function renderInspector(){
   for (const f of fxFields){
     const el = renderFieldWithFx(node, f, renderLiteralInput);
     if (el) insp.appendChild(el);
+  }
+
+  // Append call-sequence args sub-form.
+  if (node.type === 'call-sequence'){
+    insp.appendChild(renderCallArgsForm(node));
   }
 }
 
