@@ -81,6 +81,78 @@ void test_decode_triggers_list() {
     TEST_ASSERT_EQUAL_STRING("/play", trigs[0].params["path"].as<const char*>());
 }
 
+void test_decode_sequence_with_params() {
+    const char* json = R"([
+      { "id":"p1","name":"P","cooldownMs":1000,
+        "params":[
+          {"key":"hostMac","type":"mac","label":"Host MAC","default":"AA:BB:CC:DD:EE:FF","required":true},
+          {"key":"steps","type":"int","label":"Steps","default":3},
+          {"key":"loud","type":"bool","label":"Loud","default":true},
+          {"key":"src","type":"enum","label":"Src","default":"hdmi3","enumValues":"hdmi1,hdmi2,hdmi3"}
+        ],
+        "nodes":[ {"type":"wait","params":{"ms":50},"children":{}} ]
+      }
+    ])";
+    auto seqs = SequenceCodec::decodeList(json);
+    TEST_ASSERT_EQUAL(1, (int)seqs.size());
+    TEST_ASSERT_EQUAL(4, (int)seqs[0].params.size());
+    TEST_ASSERT_EQUAL_STRING("hostMac", seqs[0].params[0].key.c_str());
+    TEST_ASSERT_EQUAL((int)FieldType::MacAddress, (int)seqs[0].params[0].type);
+    TEST_ASSERT_TRUE(seqs[0].params[0].required);
+    TEST_ASSERT_EQUAL_STRING("AA:BB:CC:DD:EE:FF", seqs[0].params[0].defaultValue.as<const char*>());
+    TEST_ASSERT_EQUAL(3, seqs[0].params[1].defaultValue.as<int>());
+    TEST_ASSERT_TRUE(seqs[0].params[2].defaultValue.as<bool>());
+    TEST_ASSERT_EQUAL_STRING("hdmi1,hdmi2,hdmi3", seqs[0].params[3].enumValues.c_str());
+}
+
+void test_encode_sequence_with_params_round_trip() {
+    Sequence s;
+    s.id = "id";
+    s.name = "x";
+    s.cooldownMs = 60000;
+    ParamDef p;
+    p.key = "n";
+    p.type = FieldType::Int;
+    p.label = "N";
+    p.defaultValue.set(7);
+    p.required = false;
+    s.params.push_back(std::move(p));
+    Node n;
+    n.type = "wait";
+    n.params["ms"] = 10;
+    s.nodes.push_back(n);
+    auto j = SequenceCodec::encodeList({s});
+    auto out = SequenceCodec::decodeList(j.c_str());
+    TEST_ASSERT_EQUAL(1, (int)out[0].params.size());
+    TEST_ASSERT_EQUAL_STRING("n", out[0].params[0].key.c_str());
+    TEST_ASSERT_EQUAL(7, out[0].params[0].defaultValue.as<int>());
+}
+
+void test_decode_trigger_with_args() {
+    const char* json = R"([{
+      "id":"t","type":"http-route","params":{"path":"/play"},
+      "sequenceId":"abc","enabled":true,
+      "args":{"hostMac":"AA:BB:CC:DD:EE:FF","steps":3}
+    }])";
+    auto trigs = SequenceCodec::decodeTriggers(json);
+    TEST_ASSERT_EQUAL(1, (int)trigs.size());
+    TEST_ASSERT_EQUAL_STRING("AA:BB:CC:DD:EE:FF", trigs[0].args["hostMac"].as<const char*>());
+    TEST_ASSERT_EQUAL(3, trigs[0].args["steps"].as<int>());
+}
+
+void test_encode_trigger_with_args_round_trip() {
+    TriggerBinding b;
+    b.id = "t";
+    b.type = "http-route";
+    b.sequenceId = "s";
+    b.enabled = true;
+    b.params["path"] = "/x";
+    b.args["k"] = "v";
+    auto j = SequenceCodec::encodeTriggers({b});
+    auto out = SequenceCodec::decodeTriggers(j.c_str());
+    TEST_ASSERT_EQUAL_STRING("v", out[0].args["k"].as<const char*>());
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_decode_simple_sequence);
@@ -88,5 +160,9 @@ int main(int, char**) {
     RUN_TEST(test_decode_unknown_block_marks_broken);
     RUN_TEST(test_encode_round_trip);
     RUN_TEST(test_decode_triggers_list);
+    RUN_TEST(test_decode_sequence_with_params);
+    RUN_TEST(test_encode_sequence_with_params_round_trip);
+    RUN_TEST(test_decode_trigger_with_args);
+    RUN_TEST(test_encode_trigger_with_args_round_trip);
     return UNITY_END();
 }
