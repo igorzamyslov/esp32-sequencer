@@ -566,6 +566,20 @@ function onSlotDrop(el, ev){
   moveAcross(dragSrc, slotPath, 0);
   clearAllDropFx();
 }
+// After splicing index `srcIdx` out of `srcParent`, any other path that goes
+// THROUGH srcParent at the same level with a higher index has shifted down by
+// one. This rewrites a destination parent path so it still points where it
+// did before the source splice.
+function adjustAfterSrcSplice(dstParent, srcParent, srcIdx){
+  if (srcParent.length >= dstParent.length) return dstParent.slice();
+  for (let i=0;i<srcParent.length;i++){
+    if (srcParent[i] !== dstParent[i]) return dstParent.slice();
+  }
+  const out = dstParent.slice();
+  if (out[srcParent.length] > srcIdx) out[srcParent.length]--;
+  return out;
+}
+
 function moveAcross(srcPath, dstParent, dstIdx){
   const srcParent = srcPath.slice(0,-1);
   const srcIdx    = srcPath[srcPath.length-1];
@@ -582,9 +596,10 @@ function moveAcross(srcPath, dstParent, dstIdx){
   } else {
     const fromList = getList(srcParent);
     const [moved] = fromList.splice(srcIdx, 1);
-    const toList = getList(dstParent);
+    const fixedDstParent = adjustAfterSrcSplice(dstParent, srcParent, srcIdx);
+    const toList = getList(fixedDstParent);
     toList.splice(dstIdx, 0, moved);
-    selPath = [...dstParent, dstIdx];
+    selPath = [...fixedDstParent, dstIdx];
   }
   markDirty(); renderTree(); renderInspector();
 }
