@@ -12,6 +12,8 @@ public:
     void bind(const std::string& bindingId,
               JsonVariantConst params,
               const std::string& sequenceId,
+              JsonVariantConst defaultArgs,
+              SequenceLookup lookup,
               FireCallback onFire) override;
     void unbind(const std::string& bindingId) override;
 };

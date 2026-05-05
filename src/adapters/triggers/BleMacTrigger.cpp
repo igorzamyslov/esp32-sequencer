@@ -22,6 +22,7 @@ struct Active {
     Trigger::FireCallback cb;
     uint32_t cooldownMs;
     uint32_t lastFireMs = 0;
+    JsonDocument args;
 };
 std::map<std::string, Active> g_active;
 
@@ -50,6 +51,8 @@ const TriggerSchema& BleMacTrigger::schema() const {
 void BleMacTrigger::bind(const std::string& id,
                          JsonVariantConst params,
                          const std::string& seq,
+                         JsonVariantConst defaultArgs,
+                         SequenceLookup /*lookup*/,
                          FireCallback cb) {
     const char* mac = params["mac"].as<const char*>();
     if (!mac) return;
@@ -58,7 +61,8 @@ void BleMacTrigger::bind(const std::string& id,
     a.sequenceId = seq;
     a.cb = cb;
     a.cooldownMs = params["cooldown_ms"] | 60000U;
-    g_active[id] = a;
+    if (!defaultArgs.isNull()) a.args.set(defaultArgs);
+    g_active[id] = std::move(a);
 }
 
 void BleMacTrigger::unbind(const std::string& id) {
@@ -76,7 +80,7 @@ void BleMacTrigger::onHit(const std::string& macLower, int /*rssi*/) {
         if (a.mac != macLower) continue;
         if (now - a.lastFireMs < a.cooldownMs) continue;
         a.lastFireMs = now;
-        a.cb(a.sequenceId);
+        a.cb(a.sequenceId, a.args.as<JsonVariantConst>());
     }
 }
 

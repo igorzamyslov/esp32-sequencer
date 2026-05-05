@@ -191,8 +191,10 @@ void enterRuntimeMode() {
     seqStore = new seqb::SequenceStore(persistence);
     trigStore = new seqb::TriggerStore(persistence);
     interp = new seqb::Interpreter(seqb::Registry::instance());
-    trigMgr = new seqb::TriggerManager(seqb::Registry::instance(),
-                                       [](const std::string& sid) { enqueueRun(sid); });
+    trigMgr = new seqb::TriggerManager(
+        seqb::Registry::instance(),
+        [](const std::string& sid, JsonVariantConst /*args*/) { enqueueRun(sid); },
+        [](const std::string& id) -> const seqb::Sequence* { return seqStore->findById(id); });
     seqStore->load();
     trigStore->load();
     seedDefaultsIfEmpty();

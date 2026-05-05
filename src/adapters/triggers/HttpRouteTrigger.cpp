@@ -19,16 +19,17 @@ struct Active {
     std::string path;
     std::string sequenceId;
     Trigger::FireCallback cb;
+    Trigger::SequenceLookup lookup;
+    JsonDocument defaultArgs;
 };
 
 std::map<std::string, Active> g_active;
 
-void registerHandler(const std::string& path,
-                     const std::string& sequenceId,
-                     Trigger::FireCallback cb) {
+static void registerHandler(Active& a) {
     if (!g_server) return;
-    g_server->on(path.c_str(), HTTP_POST, [sequenceId, cb](AsyncWebServerRequest* req) {
-        cb(sequenceId);
+    // For now: handler fires with defaultArgs only. Task 6 will add query coercion.
+    g_server->on(a.path.c_str(), HTTP_POST, [&a](AsyncWebServerRequest* req) {
+        a.cb(a.sequenceId, a.defaultArgs.as<JsonVariantConst>());
         req->send(200, "text/plain", "queued");
     });
 }
@@ -53,11 +54,21 @@ const TriggerSchema& HttpRouteTrigger::schema() const {
 void HttpRouteTrigger::bind(const std::string& id,
                             JsonVariantConst params,
                             const std::string& seq,
+                            JsonVariantConst defaultArgs,
+                            SequenceLookup lookup,
                             FireCallback cb) {
     const char* path = params["path"].as<const char*>();
     if (!path || !path[0]) return;
-    g_active[id] = {std::string(path), seq, cb};
-    registerHandler(std::string(path), seq, cb);
+    Active a;
+    a.path = path;
+    a.sequenceId = seq;
+    a.cb = cb;
+    a.lookup = lookup;
+    if (!defaultArgs.isNull()) a.defaultArgs.set(defaultArgs);
+    g_active[id] = std::move(a);
+
+    // For now: handler fires with defaultArgs only. Task 6 will add query coercion.
+    registerHandler(g_active[id]);
 }
 
 void HttpRouteTrigger::unbind(const std::string& id) {
