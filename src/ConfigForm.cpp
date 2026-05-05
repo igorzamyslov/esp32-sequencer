@@ -8,9 +8,9 @@ namespace {
 <meta name=viewport content="width=device-width,initial-scale=1">
 <style>
 :root{
-  --bg:#1B2B34;--bg-2:#23323D;--bg-3:#2D3D4A;
+  --bg:#0E1A20;--bg-2:#15242C;--bg-3:#1F313A;
   --fg:#D8DEE9;--fg-2:#A7ADBA;--fg-3:#65737E;
-  --rule:#3F4D58;--accent:#6699CC;--accent-2:#62B3B2;--ok:#99C794;--danger:#EC5F67;
+  --rule:#2C3D47;--accent:#6699CC;--accent-2:#62B3B2;--ok:#99C794;--danger:#EC5F67;
   --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   color-scheme:dark;

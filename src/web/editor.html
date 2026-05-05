@@ -5,14 +5,14 @@
 <style>
 /* Oceanic Next */
 :root{
-  --bg:#1B2B34;
-  --bg-2:#23323D;
-  --bg-3:#2D3D4A;
+  --bg:#0E1A20;
+  --bg-2:#15242C;
+  --bg-3:#1F313A;
   --fg:#D8DEE9;
   --fg-2:#A7ADBA;
   --fg-3:#65737E;
-  --rule:#3F4D58;
-  --rule-2:#324049;
+  --rule:#2C3D47;
+  --rule-2:#1B2B34;
   --accent:#6699CC;     /* blue */
   --accent-2:#62B3B2;   /* cyan */
   --warn:#F99157;       /* orange */
@@ -39,9 +39,9 @@ header{
   position:sticky;top:0;z-index:10;
 }
 header .home{
-  width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;
   border:1px solid var(--rule);border-radius:6px;color:var(--fg);text-decoration:none;
-  font-size:18px;line-height:1;background:var(--bg);
+  font-size:22px;line-height:1;background:var(--bg);
 }
 header .home:hover{background:var(--bg-2);border-color:var(--fg-3)}
 header .meta{display:flex;align-items:center;gap:18px;min-width:0}
@@ -132,8 +132,8 @@ main{display:grid;grid-template-columns:240px 1fr 360px;height:calc(100vh - 53px
 .node.invalid.selected{box-shadow:0 0 0 1px var(--warn) inset;border-color:var(--warn)}
 
 .node .badge{
-  width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;
-  font:12px/1 var(--mono);color:var(--accent-2);
+  width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;
+  font:13px/1 var(--mono);color:var(--accent-2);
   border:1px solid var(--rule);border-radius:50%;background:var(--bg-2);
   flex-shrink:0;margin-top:1px;
 }
@@ -161,11 +161,11 @@ main{display:grid;grid-template-columns:240px 1fr 360px;height:calc(100vh - 53px
   padding:4px 8px;border:1px solid var(--rule);border-radius:3px;
   white-space:nowrap;flex-shrink:0;background:var(--bg-2);
 }
-.node .ctrl{display:flex;gap:3px;opacity:0;transition:opacity .1s;margin-top:1px}
+.node .ctrl{display:flex;gap:4px;opacity:0;transition:opacity .1s;margin-top:1px}
 .node:hover .ctrl,.node.selected .ctrl{opacity:1}
 .node .ctrl button{
-  padding:6px 9px;font:14px/1 var(--sans);border-color:transparent;
-  background:transparent;color:var(--fg-2);min-width:30px;
+  padding:8px 12px;font:18px/1 var(--sans);border-color:transparent;
+  background:transparent;color:var(--fg-2);min-width:40px;height:36px;
 }
 .node .ctrl button:hover{border-color:var(--rule);color:var(--fg);background:var(--bg-2)}
 .node .ctrl button.danger:hover{border-color:var(--danger);color:var(--danger);background:var(--bg-2)}
