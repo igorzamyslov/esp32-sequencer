@@ -96,7 +96,7 @@ void seedDefaultsIfEmpty() {
 }
 
 static void sendGz(AsyncWebServerRequest* req, const unsigned char* data, size_t len) {
-    auto* r = req->beginResponse_P(200, "text/html", data, len);
+    auto* r = req->beginResponse(200, "text/html", data, len);
     r->addHeader("Content-Encoding", "gzip");
     req->send(r);
 }
