@@ -3,6 +3,7 @@
 .vscode/
 .DS_Store
 .cache/
+.worktrees/
 compile_commands.json
 src/secrets.h
 src/web/web_assets.h
