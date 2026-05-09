@@ -8,7 +8,17 @@ small web UI; no recompile to change behaviour.
 
 ## Hardware
 
-- ESP32-C3 Super Mini, USB-C cable, always-on USB power source.
+- ESP32-C3 Super Mini
+
+## Screenshots
+
+### Main menu
+
+<img width="772" height="712" alt="image" src="https://github.com/user-attachments/assets/0a66eed3-8b15-4cd3-b4ad-534641793cb5" />
+
+### Sequence editor
+
+<img width="1339" height="931" alt="image" src="https://github.com/user-attachments/assets/7678eeb2-a213-44fb-9e5e-150da22cbef4" />
 
 ## First-run setup
 
@@ -23,24 +33,13 @@ small web UI; no recompile to change behaviour.
 The shipped default is a self-contained "Example sequence" using only
 `divider`, `wait`, and `repeat` — no external hardware required to run.
 
-## Bringing in real hardware
+## Personal use case
 
-For a Samsung TV / gaming PC setup typical of the original use case:
-
-- **PC**: enable Wake-on-LAN in BIOS for the wired NIC, and in Windows under
-  Device Manager → wired NIC → Power Management → *"Allow this device to wake
-  the computer"* + *"Only allow a magic packet to wake the computer"*.
-- **Samsung Tizen TV**: enable WoL — *Settings → General → Network → Expert
-  Settings → Wake on LAN*, or *Settings → General → External Device Manager →
-  Power on with mobile* on newer models.
-- **MACs to gather** (entered as block params in `/edit`, not the setup form):
-  - PC's wired-NIC MAC: `ipconfig /all` on Windows.
-  - TV's IP + WiFi MAC: TV menu *Network Status*, or your router's UI.
-    *Gotcha*: many Samsung TVs report different MACs on WiFi vs LAN (last byte
-    differs); WoL must target the *currently active* interface — verify with
-    `arp -an | grep <tv-ip>` from a same-network host.
-  - DualSense MAC (for `ble-mac` triggers): pair to your phone once and read
-    it from BT settings, or use a BLE-scanner app.
+1. Connect to router wired to PC
+2. Send WoL to PC
+3. Connect to router connected to TV
+4. Send WoL to TV
+5. Navigate to required HDMI source
 
 ## Wiping config
 
@@ -54,21 +53,6 @@ NVS namespace), so your block params survive.
 - Upload:  `pio run -e esp32c3 -t upload`
 - Monitor: `pio device monitor`
 - Tests:   `pio test -e native`
-
-### Code-quality tooling
-
-Pre-commit hooks (file hygiene, clang-format, ruff, gitleaks, markdownlint,
-conventional-commit message check):
-
-```sh
-uv sync                        # one-time: install dev deps
-uv run pre-commit install --install-hooks
-uv run pre-commit install --hook-type commit-msg
-uv run pre-commit run --all-files
-```
-
-CI (`.github/workflows/ci.yml`) runs the same hooks plus `pio test -e native`
-and the `esp32c3` firmware build on every PR.
 
 ## Sequence builder
 
@@ -95,17 +79,3 @@ To add a new block type for a different TV/PC/console, drop a single `.cpp`
 file under `src/adapters/blocks/`, register it in the static-init `_Reg`
 struct, and rebuild. Schemas are introspected at runtime so the editor picks
 up the new block automatically.
-
-## Diagnostics
-
-**Input switching**: `KEY_HDMI3` isn't recognised on all Tizen models. The
-robust recipe is: open the source picker (`KEY_SOURCE`), mash `KEY_LEFT` to
-reach the leftmost entry, then `KEY_RIGHT` *N* times to reach HDMI*n*, then
-`KEY_ENTER`. Compose this from individual `samsung-key` blocks (one per key)
-plus `wait` blocks for settle delays, optionally inside a `repeat` for the
-LEFT/RIGHT mash. The `samsung-key` block keeps a long-lived TV WebSocket
-session, so successive keys reuse the connection.
-
-**Ad-hoc key sends**: build a one-block sequence in `/edit` with a single
-`samsung-key` and "Test run" it — that replaces the legacy `/tv-key?k=…`
-diagnostic that was removed.
