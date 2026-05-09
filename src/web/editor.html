@@ -854,6 +854,22 @@ function renderIdentifying(n){
     const pred = (p.predicate||{}).type;
     if (pred) kv('predicate', pred);
   }
+  if (n.type === 'call-sequence'){
+    const target = (typeof allSeqs !== 'undefined' && p.sequenceId)
+      ? (allSeqs.find(s => s.id === p.sequenceId) || null)
+      : null;
+    if (p.sequenceId) kv('sequence', target ? (target.name || target.id) : ('? '+p.sequenceId));
+    const args = p.args && typeof p.args === 'object' ? p.args : null;
+    if (args){
+      for (const k of Object.keys(args)){
+        const v = args[k];
+        const disp = (v && typeof v === 'object' && '$param' in v)
+          ? '${'+v.$param+'}'
+          : (Array.isArray(v) ? v.join(',') : String(v));
+        kv(k, disp);
+      }
+    }
+  }
   return parts.join(' &nbsp;·&nbsp; ');
 }
 
@@ -936,7 +952,12 @@ function renderLiteralInput(node, field){
       sel.onchange = () => {
         node.params[f.key] = sel.value;
         if (f.required) sel.classList.toggle('missing', sel.value === '');
+        // Reset args when callee changes — old args may not match new params.
+        if (f.dynamicEnum === 'sequences' && node.type === 'call-sequence') {
+          node.params.args = {};
+        }
         markDirty();
+        renderTree();      // refresh row3 summary
         renderInspector(); // rebuild args form when callee changes
       };
     } else {
@@ -1066,6 +1087,9 @@ function renderCallArgsForm(node){
       type: p.type,
       label: p.label || p.key,
       default: p.default,
+      // The block-schema field shape uses `enum` for the CSV; sequence params
+      // use `enumValues`. Map both so renderLiteralInput's enum branch finds it.
+      enum: p.enumValues,
       enumValues: p.enumValues
     };
     const subnode = { params: node.params.args };
