@@ -34,16 +34,20 @@ void ApiServer::registerRoutes() {
     });
 
     // PUT /api/sequences expects raw body JSON array.
-    // Body cap raised to 64 KB so larger sequence sets fit; defaults to 16 KB.
+    // Memory budget on this device is tight; we hold:
+    //   - AsyncJson's body buffer  (~bodyLen bytes)
+    //   - AsyncJson's parsed doc   (~2x bodyLen with internal nodes)
+    //   - the parsed Sequence list (each Node owns its own JsonDocument)
+    //   - if we're not careful, the old list AND a re-encoded response too.
+    // So: free the old list first, and ack with a tiny body instead of
+    // echoing the full list. Body cap raised to 64 KB.
     auto* putSeqs = new AsyncCallbackJsonWebHandler(
         "/api/sequences", [this](AsyncWebServerRequest* req, JsonVariant& json) {
-            // Parse straight from the variant the library already gave us —
-            // skipping a serialize/reparse round-trip avoids holding three
-            // full copies of the payload in memory at once.
+            seqs_.replaceAll({});  // free old in-memory list before parsing new
             auto parsed = SequenceCodec::decodeList(json.as<JsonVariantConst>());
             seqs_.replaceAll(std::move(parsed));
             seqs_.save();
-            sendJson(req, SequenceCodec::encodeList(seqs_.all()));
+            sendJson(req, R"({"status":"ok"})");
         });
     putSeqs->setMethod(HTTP_PUT);
     putSeqs->setMaxContentLength(64 * 1024);
@@ -51,11 +55,12 @@ void ApiServer::registerRoutes() {
 
     auto* putTrigs = new AsyncCallbackJsonWebHandler(
         "/api/triggers", [this](AsyncWebServerRequest* req, JsonVariant& json) {
+            trigs_.replaceAll({});  // free old before parsing new
             auto parsed = SequenceCodec::decodeTriggers(json.as<JsonVariantConst>());
             trigs_.replaceAll(std::move(parsed));
             trigs_.save();
             tm_.applyBindings(trigs_.all());
-            sendJson(req, SequenceCodec::encodeTriggers(trigs_.all()));
+            sendJson(req, R"({"status":"ok"})");
         });
     putTrigs->setMethod(HTTP_PUT);
     putTrigs->setMaxContentLength(32 * 1024);

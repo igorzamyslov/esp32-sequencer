@@ -239,7 +239,8 @@ async function save(){
   try{
     const r=await fetch('/api/triggers',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(trigs)});
     if (!r.ok){ setStatus('save failed: '+r.status,{err:true}); return; }
-    trigs=await r.json();
+    // Refetch (save endpoint only acks to keep peak memory low on the device).
+    trigs = await fetch('/api/triggers').then(x=>x.json());
     trigs.forEach(t => { t.args = t.args || {}; });
     clearDirty();
     setStatus('saved',{ok:true});
