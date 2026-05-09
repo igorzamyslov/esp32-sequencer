@@ -57,7 +57,8 @@ void decodeNode(JsonVariantConst src, Node& dst, std::string& brokenReason) {
         }
     }
     // mark broken if leaf type is unknown (control-flow types are always known)
-    if (dst.type != "if" && dst.type != "repeat") {
+    if (dst.type != "if" && dst.type != "repeat" && dst.type != "call-sequence" &&
+        dst.type != "divider") {
         if (!Registry::instance().resolveBlock(dst.type) && brokenReason.empty()) {
             brokenReason = "unknown block type: " + dst.type;
         }

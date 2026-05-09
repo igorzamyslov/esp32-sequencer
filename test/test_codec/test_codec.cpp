@@ -155,6 +155,15 @@ void test_encode_trigger_with_args_round_trip() {
     TEST_ASSERT_EQUAL_STRING("v", out[0].args["k"].as<const char*>());
 }
 
+void test_call_sequence_node_does_not_mark_broken() {
+    const char* json = R"([{ "id":"x","name":"X","nodes":[
+      {"type":"call-sequence","params":{"sequenceId":"other"},"children":{}}
+    ]}])";
+    auto seqs = SequenceCodec::decodeList(json);
+    TEST_ASSERT_EQUAL(1, (int)seqs.size());
+    TEST_ASSERT_FALSE(seqs[0].broken);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_decode_simple_sequence);
@@ -166,5 +175,6 @@ int main(int, char**) {
     RUN_TEST(test_encode_sequence_with_params_round_trip);
     RUN_TEST(test_decode_trigger_with_args);
     RUN_TEST(test_encode_trigger_with_args_round_trip);
+    RUN_TEST(test_call_sequence_node_does_not_mark_broken);
     return UNITY_END();
 }
