@@ -252,6 +252,9 @@ void loop() {
                 ctx.config = &cfg;
                 ctx.net = &net;
                 ctx.led = &led;
+                ctx.sequenceLookup = [](const std::string& id) -> const seqb::Sequence* {
+                    return seqStore->findById(id);
+                };
                 auto r = interp->runSequence(*seq, ctx, pending_args_.as<JsonVariantConst>());
                 running_ = false;
                 lastRunMs_ = millis();
