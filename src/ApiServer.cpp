@@ -53,6 +53,45 @@ void ApiServer::registerRoutes() {
     putSeqs->setMaxContentLength(64 * 1024);
     srv_.addHandler(putSeqs);
 
+    // PUT /api/sequence — upsert one sequence. Body is the sequence object.
+    // If `id` is empty, server assigns one. Returns {"status":"ok","id":"..."}.
+    auto* putOne = new AsyncCallbackJsonWebHandler(
+        "/api/sequence", [this](AsyncWebServerRequest* req, JsonVariant& json) {
+            // Reuse the array decoder by wrapping the single object in a
+            // throwaway view: cheaper than duplicating the per-sequence
+            // decode logic, and the wrapper allocates one JsonDocument total.
+            JsonDocument tmp;
+            JsonArray arr = tmp.to<JsonArray>();
+            arr.add(json);
+            auto parsed = SequenceCodec::decodeList(tmp.as<JsonVariantConst>());
+            if (parsed.empty()) {
+                sendJson(req, R"({"error":"invalid sequence"})", 400);
+                return;
+            }
+            std::string id = seqs_.upsert(std::move(parsed.front()));
+            seqs_.save();
+            std::string body = std::string(R"({"status":"ok","id":")") + id + R"("})";
+            sendJson(req, body);
+        });
+    putOne->setMethod(HTTP_PUT);
+    putOne->setMaxContentLength(32 * 1024);
+    srv_.addHandler(putOne);
+
+    // DELETE /api/sequence?id=ABC — remove one sequence.
+    srv_.on("/api/sequence", HTTP_DELETE, [this](AsyncWebServerRequest* req) {
+        if (!req->hasParam("id")) {
+            sendJson(req, R"({"error":"missing id"})", 400);
+            return;
+        }
+        std::string id = req->getParam("id")->value().c_str();
+        if (!seqs_.removeById(id)) {
+            sendJson(req, R"({"error":"unknown sequence"})", 404);
+            return;
+        }
+        seqs_.save();
+        sendJson(req, R"({"status":"ok"})");
+    });
+
     auto* putTrigs = new AsyncCallbackJsonWebHandler(
         "/api/triggers", [this](AsyncWebServerRequest* req, JsonVariant& json) {
             trigs_.replaceAll({});  // free old before parsing new

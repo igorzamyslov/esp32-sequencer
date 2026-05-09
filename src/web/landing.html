@@ -191,7 +191,13 @@ async function load(){
 
 async function delSeq(id, name){
   if (!confirm('Delete sequence "'+name+'"?\nAny triggers pointing at it will stop firing until re-targeted.')) return;
-  await replaceList('/api/sequences', cur => cur.filter(s => s.id !== id), 'sequence '+id);
+  const s=$('#status'); s.classList.remove('ok','err'); s.textContent='> deleting sequence '+id+' …';
+  try{
+    const r = await fetch('/api/sequence?id='+encodeURIComponent(id),{method:'DELETE'});
+    s.classList.add(r.ok?'ok':'err');
+    s.textContent = '> sequence '+id+' → '+r.status;
+    if (r.ok) load();
+  }catch(e){ s.classList.add('err'); s.textContent='> delete failed: '+e; }
 }
 async function delTrig(id, label){
   if (!confirm('Delete trigger "'+label+'"?')) return;

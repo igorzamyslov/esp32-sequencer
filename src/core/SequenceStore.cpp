@@ -85,6 +85,28 @@ void SequenceStore::replaceAll(std::vector<Sequence> seqs) {
     validateCallSequenceArgs(seqs_);
 }
 
+std::string SequenceStore::upsert(Sequence seq) {
+    if (seq.id.empty()) seq.id = newId();
+    auto it = std::find_if(
+        seqs_.begin(), seqs_.end(), [&seq](const Sequence& s) { return s.id == seq.id; });
+    std::string id = seq.id;
+    if (it == seqs_.end())
+        seqs_.push_back(std::move(seq));
+    else
+        *it = std::move(seq);
+    validateCallSequenceArgs(seqs_);
+    return id;
+}
+
+bool SequenceStore::removeById(const std::string& id) {
+    auto it =
+        std::find_if(seqs_.begin(), seqs_.end(), [&id](const Sequence& s) { return s.id == id; });
+    if (it == seqs_.end()) return false;
+    seqs_.erase(it);
+    validateCallSequenceArgs(seqs_);
+    return true;
+}
+
 const Sequence* SequenceStore::findById(const std::string& id) const {
     auto it =
         std::find_if(seqs_.begin(), seqs_.end(), [&id](const Sequence& s) { return s.id == id; });
