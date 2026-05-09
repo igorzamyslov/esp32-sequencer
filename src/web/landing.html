@@ -158,6 +158,7 @@ async function load(){
       <div class="actions">
         <button class="run" onclick="run('${attr(s.id)}')">▸ run</button>
         <a class="btn" href="/edit?id=${encodeURIComponent(s.id)}">edit</a>
+        <button class="danger" title="Delete sequence" onclick="delSeq('${attr(s.id)}','${attr(s.name||s.id)}')">×</button>
       </div>
     </div>`).join('') : '<div class="empty">No sequences yet. <a href="/edit" style="color:var(--accent)">Create one ›</a></div>';
 
@@ -181,8 +182,31 @@ async function load(){
           ${t.enabled?'<span style="color:var(--ok)">enabled</span>':'<span style="color:var(--fg-3)">disabled</span>'}
         </div>
       </div>
+      <div class="actions">
+        <button class="danger" title="Delete trigger" onclick="delTrig('${attr(t.id)}','${attr(trigSummary(t))}')">×</button>
+      </div>
     </div>`;
   }).join('') : '<div class="empty">No triggers bound.</div>';
+}
+
+async function delSeq(id, name){
+  if (!confirm('Delete sequence "'+name+'"?\nAny triggers pointing at it will stop firing until re-targeted.')) return;
+  await replaceList('/api/sequences', cur => cur.filter(s => s.id !== id), 'sequence '+id);
+}
+async function delTrig(id, label){
+  if (!confirm('Delete trigger "'+label+'"?')) return;
+  await replaceList('/api/triggers', cur => cur.filter(t => t.id !== id), 'trigger '+id);
+}
+async function replaceList(path, mutate, what){
+  const s=$('#status'); s.classList.remove('ok','err'); s.textContent = '> deleting '+what+' …';
+  try{
+    const cur = await fetch(path).then(r=>r.json());
+    const next = mutate(cur);
+    const r = await fetch(path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(next)});
+    s.classList.add(r.ok?'ok':'err');
+    s.textContent = '> '+what+' → '+r.status;
+    if (r.ok) load();
+  }catch(e){ s.classList.add('err'); s.textContent='> delete failed: '+e; }
 }
 function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function attr(s){ return esc(s).replace(/'/g,"\\'"); }
