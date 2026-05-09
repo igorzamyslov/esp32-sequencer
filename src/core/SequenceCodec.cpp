@@ -86,11 +86,10 @@ void encodeNode(JsonObject dst, const Node& src) {
 
 }  // namespace
 
-std::vector<Sequence> SequenceCodec::decodeList(const char* json) {
+std::vector<Sequence> SequenceCodec::decodeList(JsonVariantConst v) {
     std::vector<Sequence> out;
-    JsonDocument doc;
-    if (deserializeJson(doc, json) != DeserializationError::Ok) return out;
-    for (JsonVariantConst sv : doc.as<JsonArrayConst>()) {
+    if (v.isNull() || !v.is<JsonArrayConst>()) return out;
+    for (JsonVariantConst sv : v.as<JsonArrayConst>()) {
         Sequence s;
         s.id = sv["id"].as<const char*>() ? sv["id"].as<const char*>() : "";
         s.name = sv["name"].as<const char*>() ? sv["name"].as<const char*>() : "";
@@ -119,6 +118,12 @@ std::vector<Sequence> SequenceCodec::decodeList(const char* json) {
         out.push_back(std::move(s));
     }
     return out;
+}
+
+std::vector<Sequence> SequenceCodec::decodeList(const char* json) {
+    JsonDocument doc;
+    if (deserializeJson(doc, json) != DeserializationError::Ok) return {};
+    return decodeList(doc.as<JsonVariantConst>());
 }
 
 std::string SequenceCodec::encodeList(const std::vector<Sequence>& seqs) {
@@ -150,11 +155,10 @@ std::string SequenceCodec::encodeList(const std::vector<Sequence>& seqs) {
     return out;
 }
 
-std::vector<TriggerBinding> SequenceCodec::decodeTriggers(const char* json) {
+std::vector<TriggerBinding> SequenceCodec::decodeTriggers(JsonVariantConst v) {
     std::vector<TriggerBinding> out;
-    JsonDocument doc;
-    if (deserializeJson(doc, json) != DeserializationError::Ok) return out;
-    for (JsonVariantConst tv : doc.as<JsonArrayConst>()) {
+    if (v.isNull() || !v.is<JsonArrayConst>()) return out;
+    for (JsonVariantConst tv : v.as<JsonArrayConst>()) {
         TriggerBinding b;
         b.id = tv["id"].as<const char*>() ? tv["id"].as<const char*>() : "";
         b.type = tv["type"].as<const char*>() ? tv["type"].as<const char*>() : "";
@@ -165,6 +169,12 @@ std::vector<TriggerBinding> SequenceCodec::decodeTriggers(const char* json) {
         out.push_back(std::move(b));
     }
     return out;
+}
+
+std::vector<TriggerBinding> SequenceCodec::decodeTriggers(const char* json) {
+    JsonDocument doc;
+    if (deserializeJson(doc, json) != DeserializationError::Ok) return {};
+    return decodeTriggers(doc.as<JsonVariantConst>());
 }
 
 std::string SequenceCodec::encodeTriggers(const std::vector<TriggerBinding>& ts) {
