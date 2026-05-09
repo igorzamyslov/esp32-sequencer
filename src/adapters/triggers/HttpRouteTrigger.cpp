@@ -28,9 +28,19 @@ struct Active {
 
 std::map<std::string, Active> g_active;
 
-static void registerHandler(Active& a) {
+// Look up by id at fire time so we never hold a dangling reference into
+// g_active. ESPAsyncWebServer can't remove path handlers, so old handlers
+// from previous applyBindings cycles stay registered; capturing by reference
+// dereferences memory that unbind() has destroyed.
+static void registerHandler(const std::string& path, const std::string& id) {
     if (!g_server) return;
-    g_server->on(a.path.c_str(), HTTP_POST, [&a](AsyncWebServerRequest* req) {
+    g_server->on(path.c_str(), HTTP_POST, [id](AsyncWebServerRequest* req) {
+        auto it = g_active.find(id);
+        if (it == g_active.end()) {
+            req->send(410, "application/json", R"({"error":"binding gone"})");
+            return;
+        }
+        Active& a = it->second;
         const Sequence* seq = a.lookup ? a.lookup(a.sequenceId) : nullptr;
         std::vector<ParamDef> empty;
         const auto& pdefs = seq ? seq->params : empty;
@@ -83,9 +93,10 @@ void HttpRouteTrigger::bind(const std::string& id,
     a.cb = cb;
     a.lookup = lookup;
     if (!defaultArgs.isNull()) a.defaultArgs.set(defaultArgs);
+    std::string path_str = a.path;
     g_active[id] = std::move(a);
 
-    registerHandler(g_active[id]);
+    registerHandler(path_str, id);
 }
 
 void HttpRouteTrigger::unbind(const std::string& id) {
