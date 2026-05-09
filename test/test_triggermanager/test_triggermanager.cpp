@@ -23,10 +23,14 @@ void test_binds_on_apply() {
 
     int fired = 0;
     std::string firedSeq;
-    TriggerManager tm(Registry::instance(), [&](const std::string& sid) {
-        fired++;
-        firedSeq = sid;
-    });
+    auto lookup = [](const std::string&) -> const seqb::Sequence* { return nullptr; };
+    TriggerManager tm(
+        Registry::instance(),
+        [&](const std::string& sid, JsonVariantConst /*args*/) {
+            fired++;
+            firedSeq = sid;
+        },
+        lookup);
     tm.applyBindings(bs);
 
     TEST_ASSERT_EQUAL(1, (int)ht.bindings.size());
@@ -50,7 +54,8 @@ void test_apply_unbinds_old_then_rebinds() {
     b2.sequenceId = "s2";
     b2.enabled = true;
 
-    TriggerManager tm(Registry::instance(), [](const std::string&) {});
+    auto lookup = [](const std::string&) -> const seqb::Sequence* { return nullptr; };
+    TriggerManager tm(Registry::instance(), [](const std::string&, JsonVariantConst) {}, lookup);
     tm.applyBindings({b1});
     TEST_ASSERT_EQUAL(1, (int)ht.bindings.size());
     tm.applyBindings({b2});
@@ -67,7 +72,8 @@ void test_disabled_binding_not_bound() {
     b.type = "http-route";
     b.sequenceId = "s1";
     b.enabled = false;
-    TriggerManager tm(Registry::instance(), [](const std::string&) {});
+    auto lookup = [](const std::string&) -> const seqb::Sequence* { return nullptr; };
+    TriggerManager tm(Registry::instance(), [](const std::string&, JsonVariantConst) {}, lookup);
     tm.applyBindings({b});
     TEST_ASSERT_EQUAL(0, (int)ht.bindings.size());
 }

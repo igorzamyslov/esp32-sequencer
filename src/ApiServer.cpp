@@ -34,38 +34,84 @@ void ApiServer::registerRoutes() {
     });
 
     // PUT /api/sequences expects raw body JSON array.
+    // Memory budget on this device is tight; we hold:
+    //   - AsyncJson's body buffer  (~bodyLen bytes)
+    //   - AsyncJson's parsed doc   (~2x bodyLen with internal nodes)
+    //   - the parsed Sequence list (each Node owns its own JsonDocument)
+    //   - if we're not careful, the old list AND a re-encoded response too.
+    // So: free the old list first, and ack with a tiny body instead of
+    // echoing the full list. Body cap raised to 64 KB.
     auto* putSeqs = new AsyncCallbackJsonWebHandler(
         "/api/sequences", [this](AsyncWebServerRequest* req, JsonVariant& json) {
-            std::string body;
-            serializeJson(json, body);
-            auto parsed = SequenceCodec::decodeList(body.c_str());
+            seqs_.replaceAll({});  // free old in-memory list before parsing new
+            auto parsed = SequenceCodec::decodeList(json.as<JsonVariantConst>());
             seqs_.replaceAll(std::move(parsed));
             seqs_.save();
-            sendJson(req, SequenceCodec::encodeList(seqs_.all()));
+            sendJson(req, R"({"status":"ok"})");
         });
     putSeqs->setMethod(HTTP_PUT);
+    putSeqs->setMaxContentLength(64 * 1024);
     srv_.addHandler(putSeqs);
+
+    // PUT /api/sequence — upsert one sequence. Body is the sequence object.
+    // If `id` is empty, server assigns one. Returns {"status":"ok","id":"..."}.
+    auto* putOne = new AsyncCallbackJsonWebHandler(
+        "/api/sequence", [this](AsyncWebServerRequest* req, JsonVariant& json) {
+            // Reuse the array decoder by wrapping the single object in a
+            // throwaway view: cheaper than duplicating the per-sequence
+            // decode logic, and the wrapper allocates one JsonDocument total.
+            JsonDocument tmp;
+            JsonArray arr = tmp.to<JsonArray>();
+            arr.add(json);
+            auto parsed = SequenceCodec::decodeList(tmp.as<JsonVariantConst>());
+            if (parsed.empty()) {
+                sendJson(req, R"({"error":"invalid sequence"})", 400);
+                return;
+            }
+            std::string id = seqs_.upsert(std::move(parsed.front()));
+            seqs_.save();
+            std::string body = std::string(R"({"status":"ok","id":")") + id + R"("})";
+            sendJson(req, body);
+        });
+    putOne->setMethod(HTTP_PUT);
+    putOne->setMaxContentLength(32 * 1024);
+    srv_.addHandler(putOne);
+
+    // DELETE /api/sequence?id=ABC — remove one sequence.
+    srv_.on("/api/sequence", HTTP_DELETE, [this](AsyncWebServerRequest* req) {
+        if (!req->hasParam("id")) {
+            sendJson(req, R"({"error":"missing id"})", 400);
+            return;
+        }
+        std::string id = req->getParam("id")->value().c_str();
+        if (!seqs_.removeById(id)) {
+            sendJson(req, R"({"error":"unknown sequence"})", 404);
+            return;
+        }
+        seqs_.save();
+        sendJson(req, R"({"status":"ok"})");
+    });
 
     auto* putTrigs = new AsyncCallbackJsonWebHandler(
         "/api/triggers", [this](AsyncWebServerRequest* req, JsonVariant& json) {
-            std::string body;
-            serializeJson(json, body);
-            auto parsed = SequenceCodec::decodeTriggers(body.c_str());
+            trigs_.replaceAll({});  // free old before parsing new
+            auto parsed = SequenceCodec::decodeTriggers(json.as<JsonVariantConst>());
             trigs_.replaceAll(std::move(parsed));
             trigs_.save();
             tm_.applyBindings(trigs_.all());
-            sendJson(req, SequenceCodec::encodeTriggers(trigs_.all()));
+            sendJson(req, R"({"status":"ok"})");
         });
     putTrigs->setMethod(HTTP_PUT);
+    putTrigs->setMaxContentLength(32 * 1024);
     srv_.addHandler(putTrigs);
 
-    // POST /api/run?id=ABC — query-param contract to avoid regex routes.
+    // Body-less POST (no Content-Type: application/json) — runs with defaults.
     srv_.on("/api/run", HTTP_POST, [this](AsyncWebServerRequest* req) {
         if (!req->hasParam("id")) {
             sendJson(req, R"({"error":"missing id"})", 400);
             return;
         }
-        std::string id = std::string(req->getParam("id")->value().c_str());
+        std::string id = req->getParam("id")->value().c_str();
         auto* s = seqs_.findById(id);
         if (!s) {
             sendJson(req, R"({"error":"unknown sequence"})", 404);
@@ -75,9 +121,33 @@ void ApiServer::registerRoutes() {
             sendJson(req, R"({"error":"sequence is broken"})", 422);
             return;
         }
-        hooks_.enqueueRun(s->id);
+        hooks_.enqueueRun(s->id, JsonVariantConst());
         sendJson(req, R"({"status":"queued"})");
     });
+
+    // POST /api/run?id=ABC — accepts optional JSON body {"args": {...}}.
+    auto* runH = new AsyncCallbackJsonWebHandler(
+        "/api/run", [this](AsyncWebServerRequest* req, JsonVariant& json) {
+            if (!req->hasParam("id")) {
+                sendJson(req, R"({"error":"missing id"})", 400);
+                return;
+            }
+            std::string id = req->getParam("id")->value().c_str();
+            auto* s = seqs_.findById(id);
+            if (!s) {
+                sendJson(req, R"({"error":"unknown sequence"})", 404);
+                return;
+            }
+            if (s->broken) {
+                sendJson(req, R"({"error":"sequence is broken"})", 422);
+                return;
+            }
+            JsonVariantConst args = json["args"].as<JsonVariantConst>();
+            hooks_.enqueueRun(s->id, args);
+            sendJson(req, R"({"status":"queued"})");
+        });
+    runH->setMethod(HTTP_POST);
+    srv_.addHandler(runH);
 }
 
 }  // namespace seqb

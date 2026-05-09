@@ -1,6 +1,7 @@
 #include "SequenceCodec.h"
 #include "Registry.h"
 #include <ArduinoJson.h>
+#include <cstring>
 
 namespace seqb {
 
@@ -9,6 +10,38 @@ namespace {
 void copyJson(JsonDocument& dst, JsonVariantConst src) {
     dst.clear();
     dst.set(src);
+}
+
+FieldType parseFieldType(const char* s) {
+    if (!s) return FieldType::String;
+    if (strcmp(s, "bool") == 0) return FieldType::Bool;
+    if (strcmp(s, "int") == 0) return FieldType::Int;
+    if (strcmp(s, "string") == 0) return FieldType::String;
+    if (strcmp(s, "stringlist") == 0) return FieldType::StringList;
+    if (strcmp(s, "mac") == 0) return FieldType::MacAddress;
+    if (strcmp(s, "enum") == 0) return FieldType::Enum;
+    if (strcmp(s, "predicate") == 0) return FieldType::PredicateRef;
+    return FieldType::String;
+}
+
+const char* fieldTypeName(FieldType t) {
+    switch (t) {
+        case FieldType::Bool:
+            return "bool";
+        case FieldType::Int:
+            return "int";
+        case FieldType::String:
+            return "string";
+        case FieldType::StringList:
+            return "stringlist";
+        case FieldType::MacAddress:
+            return "mac";
+        case FieldType::Enum:
+            return "enum";
+        case FieldType::PredicateRef:
+            return "predicate";
+    }
+    return "string";
 }
 
 void decodeNode(JsonVariantConst src, Node& dst, std::string& brokenReason) {
@@ -24,7 +57,8 @@ void decodeNode(JsonVariantConst src, Node& dst, std::string& brokenReason) {
         }
     }
     // mark broken if leaf type is unknown (control-flow types are always known)
-    if (dst.type != "if" && dst.type != "repeat") {
+    if (dst.type != "if" && dst.type != "repeat" && dst.type != "call-sequence" &&
+        dst.type != "divider") {
         if (!Registry::instance().resolveBlock(dst.type) && brokenReason.empty()) {
             brokenReason = "unknown block type: " + dst.type;
         }
@@ -52,15 +86,25 @@ void encodeNode(JsonObject dst, const Node& src) {
 
 }  // namespace
 
-std::vector<Sequence> SequenceCodec::decodeList(const char* json) {
+std::vector<Sequence> SequenceCodec::decodeList(JsonVariantConst v) {
     std::vector<Sequence> out;
-    JsonDocument doc;
-    if (deserializeJson(doc, json) != DeserializationError::Ok) return out;
-    for (JsonVariantConst sv : doc.as<JsonArrayConst>()) {
+    if (v.isNull() || !v.is<JsonArrayConst>()) return out;
+    for (JsonVariantConst sv : v.as<JsonArrayConst>()) {
         Sequence s;
         s.id = sv["id"].as<const char*>() ? sv["id"].as<const char*>() : "";
         s.name = sv["name"].as<const char*>() ? sv["name"].as<const char*>() : "";
         s.cooldownMs = sv["cooldownMs"] | 60000U;
+        for (JsonVariantConst pv : sv["params"].as<JsonArrayConst>()) {
+            ParamDef p;
+            p.key = pv["key"].as<const char*>() ? pv["key"].as<const char*>() : "";
+            p.type = parseFieldType(pv["type"].as<const char*>());
+            p.label = pv["label"].as<const char*>() ? pv["label"].as<const char*>() : "";
+            if (pv["enumValues"].is<const char*>())
+                p.enumValues = pv["enumValues"].as<const char*>();
+            p.required = pv["required"].as<bool>();
+            if (!pv["default"].isNull()) p.defaultValue.set(pv["default"]);
+            s.params.push_back(std::move(p));
+        }
         std::string brokenReason;
         for (JsonVariantConst nv : sv["nodes"].as<JsonArrayConst>()) {
             Node n;
@@ -76,6 +120,12 @@ std::vector<Sequence> SequenceCodec::decodeList(const char* json) {
     return out;
 }
 
+std::vector<Sequence> SequenceCodec::decodeList(const char* json) {
+    JsonDocument doc;
+    if (deserializeJson(doc, json) != DeserializationError::Ok) return {};
+    return decodeList(doc.as<JsonVariantConst>());
+}
+
 std::string SequenceCodec::encodeList(const std::vector<Sequence>& seqs) {
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
@@ -84,6 +134,16 @@ std::string SequenceCodec::encodeList(const std::vector<Sequence>& seqs) {
         o["id"] = s.id;
         o["name"] = s.name;
         o["cooldownMs"] = s.cooldownMs;
+        JsonArray params = o["params"].to<JsonArray>();
+        for (const auto& p : s.params) {
+            JsonObject po = params.add<JsonObject>();
+            po["key"] = p.key;
+            po["type"] = fieldTypeName(p.type);
+            po["label"] = p.label;
+            if (!p.enumValues.empty()) po["enumValues"] = p.enumValues;
+            po["required"] = p.required;
+            if (!p.defaultValue.isNull()) po["default"].set(p.defaultValue.as<JsonVariantConst>());
+        }
         JsonArray nodes = o["nodes"].to<JsonArray>();
         for (const auto& n : s.nodes) {
             JsonObject no = nodes.add<JsonObject>();
@@ -95,20 +155,26 @@ std::string SequenceCodec::encodeList(const std::vector<Sequence>& seqs) {
     return out;
 }
 
-std::vector<TriggerBinding> SequenceCodec::decodeTriggers(const char* json) {
+std::vector<TriggerBinding> SequenceCodec::decodeTriggers(JsonVariantConst v) {
     std::vector<TriggerBinding> out;
-    JsonDocument doc;
-    if (deserializeJson(doc, json) != DeserializationError::Ok) return out;
-    for (JsonVariantConst tv : doc.as<JsonArrayConst>()) {
+    if (v.isNull() || !v.is<JsonArrayConst>()) return out;
+    for (JsonVariantConst tv : v.as<JsonArrayConst>()) {
         TriggerBinding b;
         b.id = tv["id"].as<const char*>() ? tv["id"].as<const char*>() : "";
         b.type = tv["type"].as<const char*>() ? tv["type"].as<const char*>() : "";
         b.sequenceId = tv["sequenceId"].as<const char*>() ? tv["sequenceId"].as<const char*>() : "";
         b.enabled = tv["enabled"] | true;
         if (tv["params"].is<JsonVariantConst>()) copyJson(b.params, tv["params"]);
+        if (!tv["args"].isNull()) copyJson(b.args, tv["args"]);
         out.push_back(std::move(b));
     }
     return out;
+}
+
+std::vector<TriggerBinding> SequenceCodec::decodeTriggers(const char* json) {
+    JsonDocument doc;
+    if (deserializeJson(doc, json) != DeserializationError::Ok) return {};
+    return decodeTriggers(doc.as<JsonVariantConst>());
 }
 
 std::string SequenceCodec::encodeTriggers(const std::vector<TriggerBinding>& ts) {
@@ -121,6 +187,7 @@ std::string SequenceCodec::encodeTriggers(const std::vector<TriggerBinding>& ts)
         o["sequenceId"] = t.sequenceId;
         o["enabled"] = t.enabled;
         o["params"].set(t.params.as<JsonVariantConst>());
+        if (!t.args.isNull()) o["args"].set(t.args.as<JsonVariantConst>());
     }
     std::string out;
     serializeJson(doc, out);

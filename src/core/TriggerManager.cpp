@@ -3,7 +3,8 @@
 
 namespace seqb {
 
-TriggerManager::TriggerManager(Registry& r, FireCallback cb) : reg_(r), cb_(std::move(cb)) {}
+TriggerManager::TriggerManager(Registry& r, FireCallback cb, SequenceLookup lookup)
+    : reg_(r), cb_(std::move(cb)), lookup_(std::move(lookup)) {}
 
 void TriggerManager::applyBindings(const std::vector<TriggerBinding>& bs) {
     for (auto& kv : active_)
@@ -14,7 +15,12 @@ void TriggerManager::applyBindings(const std::vector<TriggerBinding>& bs) {
         if (!b.enabled) continue;
         auto* t = reg_.resolveTrigger(b.type);
         if (!t) continue;
-        t->bind(b.id, b.params.as<JsonVariantConst>(), b.sequenceId, cb_);
+        t->bind(b.id,
+                b.params.as<JsonVariantConst>(),
+                b.sequenceId,
+                b.args.as<JsonVariantConst>(),
+                lookup_,
+                cb_);
         active_[b.id] = t;
         if (t->schema().pausesBleScan) anyPauses_ = true;
     }

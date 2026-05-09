@@ -69,11 +69,47 @@ void test_trigger_store_round_trip() {
     TEST_ASSERT_EQUAL(8, (int)ts2.all()[0].id.size());
 }
 
+void test_caller_marked_broken_when_callee_arg_missing() {
+    Registry::reset();
+    static FakeBlock leaf("leaf", "L", "F");
+    Registry::instance().registerBlock(&leaf);
+
+    FakePersistence p;
+    SequenceStore store(p);
+    Sequence callee;
+    callee.id = "CB";
+    callee.name = "cb";
+    ParamDef pd;
+    pd.key = "needed";
+    pd.type = FieldType::String;
+    pd.required = true;
+    callee.params.push_back(std::move(pd));
+    Node n;
+    n.type = "leaf";
+    callee.nodes.push_back(n);
+
+    Sequence caller;
+    caller.id = "CA";
+    caller.name = "ca";
+    Node call;
+    call.type = "call-sequence";
+    call.params["sequenceId"] = "CB";
+    // NOTE: no "args" key -> required arg "needed" is missing
+    caller.nodes.push_back(call);
+
+    store.replaceAll({callee, caller});
+    auto* loaded = store.findById("CA");
+    TEST_ASSERT_NOT_NULL(loaded);
+    TEST_ASSERT_TRUE(loaded->broken);
+    TEST_ASSERT_TRUE(loaded->brokenReason.find("needed") != std::string::npos);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_store_loads_empty);
     RUN_TEST(test_store_save_and_reload);
     RUN_TEST(test_store_assigns_id_for_new);
     RUN_TEST(test_trigger_store_round_trip);
+    RUN_TEST(test_caller_marked_broken_when_callee_arg_missing);
     return UNITY_END();
 }

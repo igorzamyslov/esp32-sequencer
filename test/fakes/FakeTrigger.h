@@ -9,13 +9,18 @@ public:
     void bind(const std::string& id,
               JsonVariantConst,
               const std::string& seq,
+              JsonVariantConst,
+              SequenceLookup,
               FireCallback cb) override {
         bindings[id] = {seq, cb};
     }
     void unbind(const std::string& id) override { bindings.erase(id); }
     void fire(const std::string& id) {
         auto it = bindings.find(id);
-        if (it != bindings.end()) it->second.cb(it->second.seq);
+        if (it != bindings.end()) {
+            JsonDocument empty;
+            it->second.cb(it->second.seq, empty.as<JsonVariantConst>());
+        }
     }
     struct B {
         std::string seq;

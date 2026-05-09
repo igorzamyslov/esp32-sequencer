@@ -29,7 +29,9 @@ html,body{margin:0;background:var(--bg);color:var(--fg);
   font:14px/1.45 var(--sans);
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
+  height:100%;
 }
+body{display:flex;flex-direction:column}
 button,input,select,textarea{font:inherit;color:inherit}
 
 /* --- Header --- */
@@ -80,8 +82,8 @@ button:disabled{opacity:.5;cursor:wait}
 .kbd{font:11px/1 var(--mono);padding:2px 5px;border:1px solid currentColor;opacity:.55;border-radius:3px;margin-left:6px}
 
 /* --- Layout --- */
-main{display:grid;grid-template-columns:240px 1fr 360px;height:calc(100vh - 53px)}
-@media (max-width:1000px){main{grid-template-columns:1fr;height:auto}}
+main{display:grid;grid-template-columns:240px 1fr 360px;flex:1;min-height:0}
+@media (max-width:1000px){main{grid-template-columns:1fr;flex:none}}
 .col{overflow-y:auto;padding:18px 20px;border-right:1px solid var(--rule);background:var(--bg)}
 .col:nth-child(2){background:var(--bg-2)}
 .col:last-child{border-right:0}
@@ -233,6 +235,41 @@ main{display:grid;grid-template-columns:240px 1fr 360px;height:calc(100vh - 53px
 #status.ok{color:var(--ok)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* --- Params pane --- */
+#paramsPane{
+  padding:12px 20px;background:var(--bg);border-bottom:1px solid var(--rule);
+}
+#paramsPane h2{
+  font:600 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.1em;
+  color:var(--fg-3);margin:0 0 10px;display:flex;align-items:center;gap:8px;
+}
+#paramsPane h2 button{
+  padding:1px 7px;font:12px/1 var(--mono);border-radius:4px;
+}
+#paramsTable{
+  border-collapse:collapse;width:100%;font:12px/1.4 var(--mono);
+}
+#paramsTable th{
+  font:600 10px/1 var(--sans);text-transform:uppercase;letter-spacing:.08em;
+  color:var(--fg-3);text-align:left;padding:0 8px 6px 0;border-bottom:1px solid var(--rule);
+}
+#paramsTable td{padding:4px 8px 4px 0}
+#paramsTable input[type=text],#paramsTable input[type=number],#paramsTable select{
+  padding:5px 7px;font:12px/1 var(--mono);
+  background:var(--bg-2);border:1px solid var(--rule);border-radius:4px;color:var(--fg);
+  width:100%;min-width:60px;
+}
+#paramsTable input[type=text]:focus,#paramsTable input[type=number]:focus,#paramsTable select:focus{
+  outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;
+}
+#paramsTable input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--accent)}
+#paramsTable input:disabled,#paramsTable select:disabled{opacity:.35;cursor:not-allowed}
+#paramsTable tbody tr:first-child td{padding-top:8px}
+
+/* --- Fx toggle --- */
+.fx-toggle { margin-left: 6px; padding: 0 6px; font-size: 11px; }
+.fx-toggle.on { background: var(--accent); color: var(--bg); }
+
 /* --- Misc --- */
 ::selection{background:var(--accent);color:var(--bg)}
 input[type=number]{appearance:textfield;-moz-appearance:textfield}
@@ -251,6 +288,17 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <button id="btnSave" class="primary" onclick="save()">Save<span class="kbd">⌘S</span></button>
   </div>
 </header>
+
+<section id="paramsPane">
+  <h2>Parameters <button id="addParamBtn" title="Add parameter">+</button></h2>
+  <table id="paramsTable">
+    <thead><tr>
+      <th>key</th><th>type</th><th>label</th><th>default</th>
+      <th>required</th><th>enum (CSV)</th><th></th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</section>
 
 <main>
   <div class="col palette">
@@ -294,18 +342,29 @@ setStatus('loading…', {spin:true});
       fetch('/api/sequences').then(r=>r.json()),
     ]);
   }catch(e){ setStatus('failed: '+e, {err:true}); return; }
+  // Inject client-side hardcoded call-sequence schema (not in /api/schema).
+  schema.blocks.push({
+    type: 'call-sequence',
+    label: 'Call sequence',
+    category: 'Flow',
+    fields: [
+      {key:'sequenceId', type:'enum', label:'Sequence', required:true, dynamicEnum:'sequences'},
+    ],
+    childSlots: []
+  });
   for (const s of allSeqs) (s.nodes||[]).forEach(normalizeNode);
   if (seqId) seq = allSeqs.find(s => s.id === seqId);
   if (!seq){
     seq = { id:'', name:'New sequence', cooldownMs:60000, nodes:[] };
     allSeqs.push(seq);
   }
+  seq.params = seq.params || [];
   $('#seqName').value = seq.name;
   $('#cooldown').value = seq.cooldownMs ?? 60000;
   $('#seqName').oninput = e => { seq.name = e.target.value; markDirty(); };
   $('#cooldown').oninput = e => { seq.cooldownMs = parseInt(e.target.value,10)||0; markDirty(); };
   setStatus('');
-  renderPalette(); renderTree(); renderClip();
+  renderPalette(); renderTree(); renderClip(); renderParams();
 })();
 
 window.addEventListener('beforeunload', e => {
@@ -322,6 +381,90 @@ function isEditing(el){ return el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName
 
 function markDirty(){ dirty=true; $('#btnSave').classList.add('dirty'); }
 function clearDirty(){ dirty=false; $('#btnSave').classList.remove('dirty'); }
+
+// ---- Params pane ----
+const PARAM_TYPES = ['string','int','bool','stringlist','mac','enum','predicate'];
+
+function renderParams(){
+  const tb = document.querySelector('#paramsTable tbody');
+  tb.innerHTML = '';
+  (seq.params || []).forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.appendChild(pCell(ptextInput(p.key, v => { p.key = v; markDirty(); })));
+    tr.appendChild(pCell(ptypeSelect(p.type, v => {
+      p.type = v;
+      if (v === 'int') p.default = 0;
+      else if (v === 'bool') p.default = false;
+      else if (v === 'stringlist') p.default = [];
+      else p.default = '';
+      renderParams();
+      markDirty();
+    })));
+    tr.appendChild(pCell(ptextInput(p.label || '', v => { p.label = v; markDirty(); })));
+    tr.appendChild(pCell(pdefaultEditor(p)));
+    tr.appendChild(pCell(pcheckboxInput(p.required, v => { p.required = v; markDirty(); })));
+    tr.appendChild(pCell(ptextInput(p.enumValues || '',
+                                    v => { p.enumValues = v; markDirty(); },
+                                    p.type !== 'enum')));
+    const del = document.createElement('button');
+    del.textContent = '×'; del.title = 'Remove';
+    del.onclick = () => { seq.params.splice(i, 1); renderParams(); markDirty(); };
+    tr.appendChild(pCell(del));
+    tb.appendChild(tr);
+  });
+}
+
+function pCell(el){
+  const t = document.createElement('td');
+  t.appendChild(el);
+  return t;
+}
+
+function ptextInput(v, onChange, disabled){
+  const i = document.createElement('input');
+  i.type = 'text'; i.value = v; i.disabled = !!disabled;
+  i.oninput = () => onChange(i.value);
+  return i;
+}
+
+function pcheckboxInput(v, onChange){
+  const i = document.createElement('input');
+  i.type = 'checkbox'; i.checked = !!v;
+  i.onchange = () => onChange(i.checked);
+  return i;
+}
+
+function ptypeSelect(v, onChange){
+  const s = document.createElement('select');
+  for (const t of PARAM_TYPES){
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t;
+    if (t === v) o.selected = true;
+    s.appendChild(o);
+  }
+  s.onchange = () => onChange(s.value);
+  return s;
+}
+
+function pdefaultEditor(p){
+  if (p.type === 'bool') return pcheckboxInput(p.default, v => { p.default = v; markDirty(); });
+  if (p.type === 'int'){
+    const i = document.createElement('input');
+    i.type = 'number'; i.value = p.default ?? 0;
+    i.oninput = () => { p.default = parseInt(i.value, 10) || 0; markDirty(); };
+    return i;
+  }
+  return ptextInput(
+    typeof p.default === 'string' ? p.default : (p.default ?? ''),
+    v => { p.default = v; markDirty(); }
+  );
+}
+
+document.getElementById('addParamBtn').onclick = () => {
+  seq.params = seq.params || [];
+  seq.params.push({key:'param'+(seq.params.length+1), type:'string', label:'', default:'', required:false});
+  renderParams(); markDirty();
+};
 
 function setStatus(msg, opts){
   const el = $('#status');
@@ -711,7 +854,250 @@ function renderIdentifying(n){
     const pred = (p.predicate||{}).type;
     if (pred) kv('predicate', pred);
   }
+  if (n.type === 'call-sequence'){
+    const target = (typeof allSeqs !== 'undefined' && p.sequenceId)
+      ? (allSeqs.find(s => s.id === p.sequenceId) || null)
+      : null;
+    if (p.sequenceId) kv('sequence', target ? (target.name || target.id) : ('? '+p.sequenceId));
+    const args = p.args && typeof p.args === 'object' ? p.args : null;
+    if (args){
+      for (const k of Object.keys(args)){
+        const v = args[k];
+        const disp = (v && typeof v === 'object' && '$param' in v)
+          ? '${'+v.$param+'}'
+          : (Array.isArray(v) ? v.join(',') : String(v));
+        kv(k, disp);
+      }
+    }
+  }
   return parts.join(' &nbsp;·&nbsp; ');
+}
+
+// ---- Fx toggle helpers ----
+function fieldIsString(t){ return t==='string'||t==='stringlist'||t==='mac'; }
+
+function paramOptionsForType(t){
+  return (seq.params || []).filter(p => p.type === t).map(p => p.key);
+}
+
+function isParamRef(v){
+  return v && typeof v === 'object' && !Array.isArray(v) && '$param' in v;
+}
+
+function defaultLiteralForType(t){
+  if (t === 'int') return 0;
+  if (t === 'bool') return false;
+  if (t === 'stringlist') return [];
+  return '';
+}
+
+function renderParamSelect(currentName, type, onPick){
+  const s = document.createElement('select');
+  const empty = document.createElement('option');
+  empty.value = ''; empty.textContent = '-- pick parameter --';
+  s.appendChild(empty);
+  for (const k of paramOptionsForType(type)){
+    const o = document.createElement('option');
+    o.value = k; o.textContent = k;
+    if (k === currentName) o.selected = true;
+    s.appendChild(o);
+  }
+  s.onchange = () => onPick(s.value);
+  return s;
+}
+
+// Builds a DOM literal input for a non-string field and wires it to node.params.
+function renderLiteralInput(node, field){
+  const f = field;
+  const val = node.params[f.key];
+  if (f.type === 'int'){
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.value = (typeof val === 'number') ? val : (val ?? '');
+    const miss = f.required && (val === undefined || val === null || val === '');
+    if (miss) inp.classList.add('missing');
+    inp.oninput = () => {
+      const v = parseInt(inp.value, 10);
+      node.params[f.key] = isNaN(v) ? 0 : v;
+      inp.classList.toggle('missing', f.required && (inp.value === '' || isNaN(v)));
+      markDirty();
+    };
+    return inp;
+  }
+  if (f.type === 'bool'){
+    const lbl = document.createElement('label');
+    const inp = document.createElement('input');
+    inp.type = 'checkbox';
+    inp.checked = !!val;
+    inp.onchange = () => { node.params[f.key] = inp.checked; markDirty(); };
+    lbl.appendChild(inp);
+    lbl.appendChild(document.createTextNode(' ' + (f.label || f.key)));
+    return lbl;
+  }
+  if (f.type === 'enum'){
+    const sel = document.createElement('select');
+    if (f.required) sel.classList.toggle('missing', val === undefined || val === null || val === '');
+    if (f.dynamicEnum === 'sequences'){
+      const empty = document.createElement('option');
+      empty.value = ''; empty.textContent = '-- pick sequence --';
+      if (!val) empty.selected = true;
+      sel.appendChild(empty);
+      for (const s of allSeqs){
+        if (s.id && s.id === seq.id) continue; // exclude self
+        const opt = document.createElement('option');
+        opt.value = s.id; opt.textContent = s.name || s.id;
+        if (s.id === val) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.onchange = () => {
+        node.params[f.key] = sel.value;
+        if (f.required) sel.classList.toggle('missing', sel.value === '');
+        // Reset args when callee changes — old args may not match new params.
+        if (f.dynamicEnum === 'sequences' && node.type === 'call-sequence') {
+          node.params.args = {};
+        }
+        markDirty();
+        renderTree();      // refresh row3 summary
+        renderInspector(); // rebuild args form when callee changes
+      };
+    } else {
+      for (const o of (f.enum || '').split(',')){
+        const opt = document.createElement('option');
+        opt.value = o; opt.textContent = o;
+        if (o === val) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.onchange = () => {
+        node.params[f.key] = sel.value;
+        if (f.required) sel.classList.toggle('missing', sel.value === '');
+        markDirty();
+      };
+    }
+    return sel;
+  }
+  // Fallback for any other non-string type: plain text input
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = val ?? '';
+  inp.oninput = () => { node.params[f.key] = inp.value; markDirty(); };
+  return inp;
+}
+
+// Renders a simple literal text input for string/mac/stringlist fields.
+function renderStringLiteral(node, field){
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  const val = node.params[field.key];
+  inp.value = typeof val === 'string' ? val : (val ?? '');
+  const miss = field.required && (!val);
+  if (miss) inp.classList.add('missing');
+  inp.oninput = () => {
+    node.params[field.key] = inp.value;
+    if (field.required) inp.classList.toggle('missing', inp.value === '');
+    markDirty();
+  };
+  return inp;
+}
+
+function renderFieldWithFx(node, field, renderLit, allowString){
+  if (fieldIsString(field.type) && !allowString){
+    return null; // handled by string path in main inspector
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'field';
+  const labelRow = document.createElement('label');
+  labelRow.textContent = field.label || field.key;
+  if (field.required){
+    const req = document.createElement('span');
+    req.className = 'req'; req.title = 'required'; req.textContent = '*';
+    labelRow.appendChild(req);
+  }
+
+  const fxBtn = document.createElement('button');
+  fxBtn.type = 'button';
+  fxBtn.className = 'fx-toggle ghost';
+  fxBtn.textContent = 'fx';
+  fxBtn.title = 'Use a parameter';
+  if (isParamRef(node.params[field.key])) fxBtn.classList.add('on');
+  labelRow.appendChild(fxBtn);
+  wrap.appendChild(labelRow);
+
+  const slot = document.createElement('div');
+  function rerender(){
+    slot.innerHTML = '';
+    const v = node.params[field.key];
+    if (isParamRef(v)){
+      slot.appendChild(renderParamSelect(v.$param, field.type, name => {
+        if (!name){
+          node.params[field.key] = defaultLiteralForType(field.type);
+          fxBtn.classList.remove('on');
+          markDirty();
+          rerender();
+        } else {
+          node.params[field.key] = {'$param': name};
+          markDirty();
+        }
+      }));
+    } else {
+      const lit = renderLit(node, field);
+      if (lit instanceof Node) slot.appendChild(lit);
+    }
+  }
+  fxBtn.onclick = (e) => {
+    e.preventDefault();
+    const isFx = isParamRef(node.params[field.key]);
+    if (isFx){
+      node.params[field.key] = defaultLiteralForType(field.type);
+      fxBtn.classList.remove('on');
+    } else {
+      node.params[field.key] = {'$param': ''};
+      fxBtn.classList.add('on');
+    }
+    markDirty();
+    rerender();
+  };
+  rerender();
+  wrap.appendChild(slot);
+  return wrap;
+}
+
+// ---- Call-sequence args sub-form ----
+function renderCallArgsForm(node){
+  const wrap = document.createElement('div');
+  wrap.className = 'args-form';
+  const title = document.createElement('h3');
+  title.textContent = 'Arguments';
+  wrap.appendChild(title);
+
+  const callee = allSeqs.find(s => s.id === node.params.sequenceId) || null;
+  if (!callee || !callee.params || !callee.params.length){
+    const empty = document.createElement('p');
+    empty.style.opacity = '0.6';
+    empty.textContent = callee ? '(callee has no parameters)' : '(pick a sequence to set args)';
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  if (!node.params.args) node.params.args = {};
+
+  for (const p of callee.params){
+    const fakeField = {
+      key: p.key,
+      type: p.type,
+      label: p.label || p.key,
+      default: p.default,
+      // The block-schema field shape uses `enum` for the CSV; sequence params
+      // use `enumValues`. Map both so renderLiteralInput's enum branch finds it.
+      enum: p.enumValues,
+      enumValues: p.enumValues
+    };
+    const subnode = { params: node.params.args };
+    const lit = fieldIsString(p.type) ? renderStringLiteral : renderLiteralInput;
+    const el = renderFieldWithFx(subnode, fakeField, lit, /*allowString=*/true);
+    if (el) wrap.appendChild(el);
+  }
+  return wrap;
 }
 
 // ---- Inspector ----
@@ -720,6 +1106,8 @@ function renderInspector(){
   const node=getNode(selPath);
   const sch=blockSchema(node.type);
   const disabled=!!(node.params&&node.params._disabled);
+
+  // Build the fixed header (insp-head + label field) as HTML, then switch to DOM.
   let html=`<div class="insp-head">
       <span class="ty">${escapeHtml(node.type)}</span>
       <label class="toggle"><input type="checkbox" id="p__disabled" ${disabled?'checked':''}/> disabled</label>
@@ -728,10 +1116,27 @@ function renderInspector(){
     <label>Label <span style="color:var(--fg-3);font-weight:400;font-size:11px;letter-spacing:0;text-transform:none">your annotation</span></label>
     <input id="p__label" placeholder="What does this step do?" value="${escapeAttr((node.params&&node.params._label)||'')}" />
   </div>`;
-  html+=(sch?.fields||[]).map(f => fieldHtml(f, node.params[f.key], 'p_'+f.key)).join('');
+
+  // Separate schema fields into string-typed (HTML path) and non-string (DOM/fx path).
+  const stringFields = (sch?.fields||[]).filter(f => fieldIsString(f.type) || f.type==='predicateRef');
+  const fxFields     = (sch?.fields||[]).filter(f => !fieldIsString(f.type) && f.type!=='predicateRef');
+
+  html+=stringFields.map(f => fieldHtml(f, node.params[f.key], 'p_'+f.key)).join('');
   $('#inspector').innerHTML=html;
   attachLabelField(node); attachDisableField(node);
-  for (const f of sch?.fields||[]) attachField(node, f, 'p_'+f.key);
+  for (const f of stringFields) attachField(node, f, 'p_'+f.key);
+
+  // Append DOM-based fx-toggle fields for non-string types.
+  const insp = $('#inspector');
+  for (const f of fxFields){
+    const el = renderFieldWithFx(node, f, renderLiteralInput);
+    if (el) insp.appendChild(el);
+  }
+
+  // Append call-sequence args sub-form.
+  if (node.type === 'call-sequence'){
+    insp.appendChild(renderCallArgsForm(node));
+  }
 }
 
 function fieldHtml(f, val, id){
@@ -809,16 +1214,15 @@ async function save(){
   $('#btnSave').disabled=true;
   setStatus('saving…', {spin:true});
   try{
-    const r=await fetch('/api/sequences',{
+    // Send only the current sequence (singular PUT) to keep the device's
+    // peak memory low; server upserts and returns the assigned id.
+    const r = await fetch('/api/sequence',{
       method:'PUT', headers:{'content-type':'application/json'},
-      body:JSON.stringify(allSeqs),
+      body:JSON.stringify(seq),
     });
     if (!r.ok){ setStatus('save failed: '+r.status,{err:true}); return; }
-    const updated=await r.json();
-    if (!seq.id){
-      const m=updated.find(s=>s.name===seq.name && s.nodes.length===seq.nodes.length);
-      if (m) seq.id=m.id;
-    }
+    const ack = await r.json();
+    if (ack && ack.id) seq.id = ack.id;
     clearDirty();
     setStatus('saved', {ok:true});
     setTimeout(()=>setStatus(''),1500);
